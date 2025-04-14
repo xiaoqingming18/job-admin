@@ -9,4 +9,3 @@ import { RouterView } from 'vue-router'
 <style>
 /* Global styles will be placed here */
 </style>
-</style>
