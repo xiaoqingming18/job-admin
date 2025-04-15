@@ -124,7 +124,18 @@ const handleLogin = async () => {
         // 跳转到重定向地址或默认首页
         router.push(redirect || '/')
       } catch (error: any) {
-        ElMessage.error(error.message || '登录失败')
+        // 显示具体的错误信息
+        const errorMessage = error.response?.data?.message || error.message || '登录失败，请稍后重试'
+        ElMessage.error(errorMessage)
+        
+        // 如果是密码错误，清空密码字段
+        if (errorMessage.includes('密码错误') || errorMessage.includes('账号或密码不正确')) {
+          loginForm.password = ''
+        }
+        // 如果是用户类型错误，清空用户类型
+        if (errorMessage.includes('无法登录')) {
+          loginForm.userType = ''
+        }
       } finally {
         loading.value = false
       }

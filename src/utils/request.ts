@@ -54,7 +54,7 @@ service.interceptors.response.use(
       return data.data
     } else {
       // 处理业务错误
-      const errorMessage = ERROR_CODE_MAP[data.code] || data.message || '未知错误'
+      const errorMessage = data.message || ERROR_CODE_MAP[data.code] || '未知错误'
       
       // 处理特定错误码
       if (data.code === 40005 || data.code === 40006) {
