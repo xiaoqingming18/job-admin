@@ -39,7 +39,7 @@
         </el-form-item>
 
         <div class="login-options">
-          <router-link to="/register">注册账号</router-link>
+          <router-link to="/register">企业注册</router-link>
           <router-link to="/forgot-password">忘记密码？</router-link>
         </div>
       </el-form>
@@ -108,12 +108,12 @@ const handleLogin = async () => {
         }
 
         // 检查并保存token
-        if (!response?.token) {
+        if (!response?.data?.token) {
           throw new Error('登录失败：未获取到有效的token')
         }
 
         // 保存token
-        localStorage.setItem('token', response.token)
+        localStorage.setItem('token', response.data.token)
         // 保存用户类型
         localStorage.setItem('userType', userType)
 
@@ -122,7 +122,7 @@ const handleLogin = async () => {
         // 获取重定向地址
         const redirect = router.currentRoute.value.query.redirect as string
         // 跳转到重定向地址或默认首页
-        router.push(redirect || '/')
+        router.push(redirect || '/dashboard')
       } catch (error: any) {
         // 显示具体的错误信息
         const errorMessage = error.response?.data?.message || error.message || '登录失败，请稍后重试'

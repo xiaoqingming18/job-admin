@@ -1510,6 +1510,281 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Delete Company API -->
+                <div class="api-endpoint">
+                    <div class="endpoint-header">
+                        <span class="http-method method-delete">DELETE</span>
+                        <span class="endpoint-path">/company/delete/{id}</span>
+                        <span class="endpoint-summary">删除企业</span>
+                    </div>
+                    <div class="endpoint-content">
+                        <p>删除指定ID的企业。如果企业下存在项目，则不允许删除。</p>
+                        
+                        <h3 class="section-title">请求头</h3>
+                        <table class="param-table">
+                            <thead>
+                                <tr>
+                                    <th>参数名</th>
+                                    <th>类型</th>
+                                    <th>是否必须</th>
+                                    <th>描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Authorization</td>
+                                    <td>String</td>
+                                    <td class="param-required">必须</td>
+                                    <td>Bearer 令牌</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h3 class="section-title">路径参数</h3>
+                        <table class="param-table">
+                            <thead>
+                                <tr>
+                                    <th>参数名</th>
+                                    <th>类型</th>
+                                    <th>是否必须</th>
+                                    <th>描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>id</td>
+                                    <td>Integer</td>
+                                    <td class="param-required">必须</td>
+                                    <td>企业ID</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h3 class="section-title">响应示例</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#delete-company-response">复制</button>
+                            </div>
+                            <pre id="delete-company-response"><code>{
+    "code": 0,
+    "data": "删除成功",
+    "message": "success"
+}</code></pre>
+                        </div>
+                        
+                        <h3 class="section-title">错误响应示例 - 企业有项目</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#delete-company-error">复制</button>
+                            </div>
+                            <pre id="delete-company-error"><code>{
+    "code": 40300,
+    "data": null,
+    "message": "该企业存在关联的项目数据，无法删除"
+}</code></pre>
+                        </div>
+                        
+                        <h3 class="section-title">错误响应示例 - 无权限</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#delete-company-error-auth">复制</button>
+                            </div>
+                            <pre id="delete-company-error-auth"><code>{
+    "code": 40300,
+    "data": null,
+    "message": "只有系统管理员才能删除企业"
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 强制删除企业接口 -->
+                <div class="api-endpoint">
+                    <div class="endpoint-header">
+                        <span class="http-method method-delete">DELETE</span>
+                        <span class="endpoint-path">/company/force-delete/{id}</span>
+                        <span class="endpoint-summary">强制删除企业</span>
+                    </div>
+                    <div class="endpoint-content">
+                        <p>强制删除指定ID的企业，会先删除该企业下所有项目，然后再删除企业。只有系统管理员可以操作。</p>
+                        
+                        <h3 class="section-title">请求头</h3>
+                        <table class="param-table">
+                            <thead>
+                                <tr>
+                                    <th>参数名</th>
+                                    <th>类型</th>
+                                    <th>是否必须</th>
+                                    <th>描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Authorization</td>
+                                    <td>String</td>
+                                    <td class="param-required">必须</td>
+                                    <td>Bearer 令牌</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h3 class="section-title">路径参数</h3>
+                        <table class="param-table">
+                            <thead>
+                                <tr>
+                                    <th>参数名</th>
+                                    <th>类型</th>
+                                    <th>是否必须</th>
+                                    <th>描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>id</td>
+                                    <td>Integer</td>
+                                    <td class="param-required">必须</td>
+                                    <td>企业ID</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h3 class="section-title">响应示例</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#force-delete-company-response">复制</button>
+                            </div>
+                            <pre id="force-delete-company-response"><code>{
+    "code": 0,
+    "data": "强制删除成功",
+    "message": "success"
+}</code></pre>
+                        </div>
+                        
+                        <h3 class="section-title">错误响应示例 - 无权限</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#force-delete-company-error-auth">复制</button>
+                            </div>
+                            <pre id="force-delete-company-error-auth"><code>{
+    "code": 40300,
+    "data": null,
+    "message": "只有系统管理员才能强制删除企业"
+}</code></pre>
+                        </div>
+                        
+                        <h3 class="section-title">错误响应示例 - 企业不存在</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#force-delete-company-error-not-found">复制</button>
+                            </div>
+                            <pre id="force-delete-company-error-not-found"><code>{
+    "code": 40400,
+    "data": null,
+    "message": "企业不存在"
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- List Companies API -->
+                <div class="api-endpoint">
+                    <div class="endpoint-header">
+                        <span class="http-method method-post">POST</span>
+                        <span class="endpoint-path">/company/list</span>
+                        <span class="endpoint-summary">分页查询企业列表</span>
+                    </div>
+                    <div class="endpoint-content">
+                        <p>分页查询企业列表，支持企业名称模糊搜索。</p>
+                        
+                        <h3 class="section-title">请求参数</h3>
+                        <table class="param-table">
+                            <thead>
+                                <tr>
+                                    <th>参数名</th>
+                                    <th>类型</th>
+                                    <th>是否必须</th>
+                                    <th>描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>name</td>
+                                    <td>String</td>
+                                    <td>可选</td>
+                                    <td>企业名称（模糊查询）</td>
+                                </tr>
+                                <tr>
+                                    <td>pageNum</td>
+                                    <td>Integer</td>
+                                    <td>可选</td>
+                                    <td>当前页码，默认1</td>
+                                </tr>
+                                <tr>
+                                    <td>pageSize</td>
+                                    <td>Integer</td>
+                                    <td>可选</td>
+                                    <td>每页记录数，默认10</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h3 class="section-title">请求示例</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#list-companies-request">复制</button>
+                            </div>
+                            <pre id="list-companies-request"><code>{
+  "name": "科技",
+  "pageNum": 1,
+  "pageSize": 10
+}</code></pre>
+                        </div>
+                        
+                        <h3 class="section-title">响应示例</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#list-companies-response">复制</button>
+                            </div>
+                            <pre id="list-companies-response"><code>{
+  "code": 0,
+  "data": {
+    "records": [
+      {
+        "id": 1,
+        "name": "北京智慧科技有限公司",
+        "licenseNumber": "91110105MA00B4XC2X",
+        "address": "北京市朝阳区创新大厦123号",
+        "legalPerson": "张明",
+        "createTime": "2023-04-01T10:30:00"
+      },
+      {
+        "id": 2,
+        "name": "上海科技集团有限公司",
+        "licenseNumber": "91310115MA1H9X7N5X",
+        "address": "上海市浦东新区科技路456号",
+        "legalPerson": "李强",
+        "createTime": "2023-05-15T14:20:00"
+      }
+    ],
+    "total": 2,
+    "size": 10,
+    "current": 1,
+    "pages": 1
+  },
+  "message": "success"
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
             </div>        </section>
 
         <!-- Project Module -->
@@ -2089,6 +2364,110 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- 删除项目接口 -->
+                <div class="api-endpoint">
+                    <div class="endpoint-header">
+                        <span class="http-method method-delete">DELETE</span>
+                        <span class="endpoint-path">/project/delete/{id}</span>
+                        <span class="endpoint-summary">删除项目</span>
+                    </div>
+                    <div class="endpoint-content">
+                        <p>删除指定ID的项目。仅系统管理员和项目经理可以删除项目，且不能删除存在关联劳务需求的项目。</p>
+                        
+                        <h3 class="section-title">请求头</h3>
+                        <table class="param-table">
+                            <thead>
+                                <tr>
+                                    <th>参数名</th>
+                                    <th>类型</th>
+                                    <th>是否必须</th>
+                                    <th>描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Authorization</td>
+                                    <td>String</td>
+                                    <td class="param-required">必须</td>
+                                    <td>Bearer 令牌</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h3 class="section-title">路径参数</h3>
+                        <table class="param-table">
+                            <thead>
+                                <tr>
+                                    <th>参数名</th>
+                                    <th>类型</th>
+                                    <th>是否必须</th>
+                                    <th>描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>id</td>
+                                    <td>Integer</td>
+                                    <td class="param-required">必须</td>
+                                    <td>项目ID</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h3 class="section-title">响应示例</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#delete-project-response">复制</button>
+                            </div>
+                            <pre id="delete-project-response"><code>{
+    "code": 0,
+    "data": "删除成功",
+    "message": "success"
+}</code></pre>
+                        </div>
+                        
+                        <h3 class="section-title">错误响应示例 - 无权限</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#delete-project-error-auth">复制</button>
+                            </div>
+                            <pre id="delete-project-error-auth"><code>{
+    "code": 40300,
+    "data": null,
+    "message": "您无权操作此项目"
+}</code></pre>
+                        </div>
+                        
+                        <h3 class="section-title">错误响应示例 - 项目有关联劳务需求</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#delete-project-error-demands">复制</button>
+                            </div>
+                            <pre id="delete-project-error-demands"><code>{
+    "code": 40300,
+    "data": null,
+    "message": "该项目存在关联的劳务需求数据，无法删除"
+}</code></pre>
+                        </div>
+                        
+                        <h3 class="section-title">错误响应示例 - 项目不存在</h3>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span>JSON</span>
+                                <button class="copy-button" data-clipboard-target="#delete-project-error-notfound">复制</button>
+                            </div>
+                            <pre id="delete-project-error-notfound"><code>{
+    "code": 40400,
+    "data": null,
+    "message": "项目不存在"
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -2663,6 +3042,108 @@
                 </ul>
             </div>
         </div>
+
+        <!-- Upload File API -->
+        <div class="api-endpoint">
+            <div class="endpoint-header">
+                <span class="http-method method-post">POST</span>
+                <span class="endpoint-path">/file/upload</span>
+                <span class="endpoint-summary">通用文件上传</span>
+            </div>
+            <div class="endpoint-content">
+                <p class="endpoint-description">上传文件到指定目录并返回访问URL</p>
+                
+                <h3 class="section-title">请求参数</h3>
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>参数名</th>
+                            <th>类型</th>
+                            <th>是否必须</th>
+                            <th>描述</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>file</td>
+                            <td>file</td>
+                            <td class="param-required">必须</td>
+                            <td>要上传的文件</td>
+                        </tr>
+                        <tr>
+                            <td>directory</td>
+                            <td>string</td>
+                            <td>可选</td>
+                            <td>存储目录，默认为"common"</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="section-title">支持的文件类型</h3>
+                <ul>
+                    <li>图片：JPEG、PNG、GIF、BMP、WEBP</li>
+                    <li>文档：PDF、Word（doc/docx）、Excel（xls/xlsx）、PowerPoint（ppt/pptx）</li>
+                    <li>文本：TXT</li>
+                </ul>
+
+                <h3 class="section-title">响应参数</h3>
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>参数名</th>
+                            <th>类型</th>
+                            <th>描述</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>url</td>
+                            <td>string</td>
+                            <td>文件访问URL（简化格式，仅包含到文件后缀名）</td>
+                        </tr>
+                        <tr>
+                            <td>objectName</td>
+                            <td>string</td>
+                            <td>文件在MinIO中的对象名称</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="section-title">请求示例</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>Form Data</span>
+                    </div>
+                    <pre><code>Content-Type: multipart/form-data
+
+file: (binary)
+directory: images</code></pre>
+                </div>
+
+                <h3 class="section-title">响应示例</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>JSON</span>
+                    </div>
+                    <pre><code>{
+    "code": 0,
+    "data": {
+        "url": "http://192.168.200.60:9000/job-server/images/f7c9a8b3e6d54321.jpg",
+        "objectName": "images/f7c9a8b3e6d54321.jpg"
+    },
+    "message": "success"
+}</code></pre>
+                </div>
+
+                <h3 class="section-title">说明</h3>
+                <ul>
+                    <li>文件大小限制为20MB</li>
+                    <li>支持多种文件类型，详见上方支持的文件类型列表</li>
+                    <li>返回的URL为永久有效的简化格式，不包含查询参数</li>
+                    <li>建议根据文件类型选择合适的目录进行存储</li>
+                </ul>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -2708,6 +3189,12 @@
                                     <td>工种类别（最多50个字符，如：土建/装修/水电等）</td>
                                 </tr>
                                 <tr>
+                                    <td>icon</td>
+                                    <td>String</td>
+                                    <td>可选</td>
+                                    <td>工种图标URL</td>
+                                </tr>
+                                <tr>
                                     <td>description</td>
                                     <td>String</td>
                                     <td>可选</td>
@@ -2737,6 +3224,7 @@
                             <pre id="add-occupation-request"><code>{
   "name": "木工",
   "category": "装修",
+  "icon": "https://example.com/icon.png",
   "description": "负责建筑装修过程中的木质结构施工、家具制作等工作",
   "requiredCertificates": "[\"初级木工证\", \"中级木工证\"]",
   "averageDailyWage": 320.00
@@ -2755,6 +3243,7 @@
     "id": 1,
     "name": "木工",
     "category": "装修",
+    "icon": "https://example.com/icon.png",
     "description": "负责建筑装修过程中的木质结构施工、家具制作等工作",
     "requiredCertificates": "[\"初级木工证\", \"中级木工证\"]",
     "averageDailyWage": 320.00,
@@ -2763,12 +3252,11 @@
   },
   "message": "success"
 }</code></pre>
-}</code></pre>
-                         </div>
-                     </div>
-                 </div>
-             </div>
-         </section>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <!-- Labor Demand Module -->
         <section id="labor-demand" class="module" style="display: none;">

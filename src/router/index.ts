@@ -17,7 +17,7 @@ const router = createRouter({
       name: 'register',
       component: () => import('@/views/login/Register.vue'),
       meta: {
-        title: '注册',
+        title: '企业注册',
         requiresAuth: false
       }
     },
@@ -31,8 +31,47 @@ const router = createRouter({
       }
     },
     {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('@/views/dashboard/index.vue'),
+      meta: {
+        title: '管理中心',
+        requiresAuth: true
+      },
+      children: [
+        {
+          path: '',
+          name: 'dashboard-home',
+          component: () => import('@/views/dashboard/home/index.vue'),
+          meta: {
+            title: '首页',
+            requiresAuth: true
+          }
+        },
+        {
+          path: 'companies',
+          name: 'companies',
+          component: () => import('@/views/dashboard/companies/index.vue'),
+          meta: {
+            title: '企业管理',
+            requiresAuth: true
+          }
+        },
+        // 其他子路由可以在这里添加
+      ]
+    },
+    {
       path: '/',
-      redirect: '/login'
+      redirect: '/dashboard'
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/error/404.vue'),
+      meta: {
+        title: '页面未找到',
+        requiresAuth: false
+      }
     }
   ]
 })
@@ -40,7 +79,7 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   // 设置页面标题
-  document.title = `${to.meta.title} - 工程项目管理系统`
+  document.title = to.meta.title ? `${to.meta.title} - 工程项目管理系统` : '工程项目管理系统'
 
   // 检查是否需要登录权限
   if (to.matched.some(record => record.meta.requiresAuth)) {

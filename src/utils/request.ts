@@ -51,7 +51,7 @@ service.interceptors.response.use(
     // 根据 API 文档，后端统一返回格式 { code: number, data: any, message: string }
     // code 为 0 表示成功，其他值表示失败
     if (data.code === 0) {
-      return data.data
+      return data
     } else {
       // 处理业务错误
       const errorMessage = data.message || ERROR_CODE_MAP[data.code] || '未知错误'

@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import {
+  HomeFilled,
+  Office,
+  Briefcase,
+  Suitcase,
+  User,
+  Setting,
+  Expand,
+  Fold,
+  ArrowDown
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
 const isCollapse = ref(false)
