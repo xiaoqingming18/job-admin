@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { checkPermission } from '@/utils/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,7 +56,8 @@ const router = createRouter({
           component: () => import('@/views/dashboard/companies/index.vue'),
           meta: {
             title: '企业管理',
-            requiresAuth: true
+            requiresAuth: true,
+            adminOnly: true
           }
         },
         // 其他子路由可以在这里添加
@@ -91,6 +94,13 @@ router.beforeEach((to, from, next) => {
         query: { redirect: to.fullPath }
       })
     } else {
+      // 检查是否是管理员限制的路由
+      if (to.matched.some(record => record.meta.adminOnly)) {
+        if (!checkPermission(true)) {
+          next({ path: '/dashboard' })
+          return
+        }
+      }
       next()
     }
   } else {

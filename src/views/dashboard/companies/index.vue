@@ -135,6 +135,21 @@
         <el-form-item label="法定代表人" prop="legalPerson">
           <el-input v-model="form.legalPerson" placeholder="请输入法定代表人" />
         </el-form-item>
+        <el-form-item label="管理员用户名" prop="username" v-if="!isEdit">
+          <el-input v-model="form.username" placeholder="请输入管理员用户名" />
+        </el-form-item>
+        <el-form-item label="密码" prop="password" v-if="!isEdit">
+          <el-input v-model="form.password" placeholder="请输入密码" type="password" />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword" v-if="!isEdit">
+          <el-input v-model="form.confirmPassword" placeholder="请再次输入密码" type="password" />
+        </el-form-item>
+        <el-form-item label="电子邮箱" prop="email" v-if="!isEdit">
+          <el-input v-model="form.email" placeholder="请输入电子邮箱" />
+        </el-form-item>
+        <el-form-item label="职位" prop="position" v-if="!isEdit">
+          <el-input v-model="form.position" placeholder="请输入职位" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
@@ -159,7 +174,7 @@ import {
   Refresh,
   View
 } from '@element-plus/icons-vue'
-import { getCompanyList, updateCompany, deleteCompany, addCompany } from '@/api/company'
+import { getCompanyList, updateCompany, deleteCompany, registerCompany } from '@/api/company'
 
 // 格式化日期
 const formatDate = (dateStr: string) => {
@@ -265,8 +280,32 @@ const form = reactive({
   name: '',
   licenseNumber: '',
   address: '',
-  legalPerson: ''
+  legalPerson: '',
+  username: '',
+  password: '',
+  confirmPassword: '',
+  email: '',
+  position: ''
 })
+
+const validatePass2 = (rule: any, value: string, callback: any) => {
+  if (value === '') {
+    callback(new Error('请再次输入密码'))
+  } else if (value !== form.password) {
+    callback(new Error('两次输入密码不一致!'))
+  } else {
+    callback()
+  }
+}
+
+const validateLicenseNumber = (rule: any, value: string, callback: any) => {
+  const pattern = /^[0-9A-HJ-NPQRTUWXY]{2}\d{6}[0-9A-HJ-NPQRTUWXY]{10}$/
+  if (!pattern.test(value)) {
+    callback(new Error('请输入正确的18位统一社会信用代码'))
+  } else {
+    callback()
+  }
+}
 
 const rules = {
   name: [
@@ -275,13 +314,31 @@ const rules = {
   ],
   licenseNumber: [
     { required: true, message: '请输入营业执照号', trigger: 'blur' },
-    { pattern: /^[0-9A-HJ-NPQRTUWXY]{2}\d{6}[0-9A-HJ-NPQRTUWXY]{10}$/, message: '请输入正确的营业执照号', trigger: 'blur' }
+    { validator: validateLicenseNumber, trigger: 'blur' }
   ],
   address: [
     { max: 200, message: '长度不能超过200个字符', trigger: 'blur' }
   ],
   legalPerson: [
-    { required: true, message: '请输入法定代表人', trigger: 'blur' },
+    { required: true, message: '请输入法定代表人姓名', trigger: 'blur' },
+    { max: 50, message: '长度不能超过50个字符', trigger: 'blur' }
+  ],
+  username: [
+    { required: !isEdit.value, message: '请输入管理员用户名', trigger: 'blur' },
+    { min: 4, max: 50, message: '长度在4到50个字符之间', trigger: 'blur' }
+  ],
+  password: [
+    { required: !isEdit.value, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '长度在6到20个字符之间', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: !isEdit.value, validator: validatePass2, trigger: 'blur' }
+  ],
+  email: [
+    { required: !isEdit.value, message: '请输入电子邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  position: [
     { max: 50, message: '长度不能超过50个字符', trigger: 'blur' }
   ]
 }
@@ -306,6 +363,11 @@ const handleAdd = () => {
   form.licenseNumber = ''
   form.address = ''
   form.legalPerson = ''
+  form.username = ''
+  form.password = ''
+  form.confirmPassword = ''
+  form.email = ''
+  form.position = ''
   dialogVisible.value = true
 }
 
@@ -320,13 +382,18 @@ const submitForm = async () => {
           await updateCompany(form)
           ElMessage.success('更新企业信息成功')
         } else {
-          await addCompany(form)
+          const requestData = { ...form }
+          delete requestData.confirmPassword
+          delete requestData.id
+          
+          await registerCompany(requestData)
           ElMessage.success('添加企业成功')
         }
         dialogVisible.value = false
         fetchData()
       } catch (error: any) {
-        ElMessage.error(error.message || (isEdit.value ? '更新企业信息失败' : '添加企业失败'))
+        const errorMessage = error.response?.data?.message || error.message || (isEdit.value ? '更新企业信息失败' : '添加企业失败')
+        ElMessage.error(errorMessage)
       } finally {
         submitting.value = false
       }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   HomeFilled,
@@ -12,9 +12,13 @@ import {
   Fold,
   ArrowDown
 } from '@element-plus/icons-vue'
+import { clearUserInfo, isAdmin } from '@/utils/auth'
 
 const router = useRouter()
 const isCollapse = ref(false)
+
+// 获取当前用户类型
+const userType = ref(localStorage.getItem('userType') || '')
 
 const toggleSidebar = () => {
   isCollapse.value = !isCollapse.value
@@ -22,13 +26,14 @@ const toggleSidebar = () => {
 
 const handleCommand = (command: string) => {
   if (command === 'logout') {
-    // TODO: 实现登出逻辑
+    // 使用权限工具处理注销
+    clearUserInfo()
     router.push('/login')
   }
 }
 
-// 菜单配置
-const menuItems = [
+// 基础菜单配置
+const baseMenuItems = [
   {
     icon: 'HomeFilled',
     title: '首页',
@@ -37,7 +42,8 @@ const menuItems = [
   {
     icon: 'Office',
     title: '企业管理',
-    index: '/dashboard/companies'
+    index: '/dashboard/companies',
+    adminOnly: true // 标记为仅管理员可见
   },
   {
     icon: 'Briefcase',
@@ -60,6 +66,17 @@ const menuItems = [
     index: '/dashboard/settings'
   }
 ]
+
+// 根据用户类型过滤菜单项
+const menuItems = computed(() => {
+  return baseMenuItems.filter(item => {
+    // 如果菜单项标记为仅管理员可见，则只在用户类型为admin时显示
+    if (item.adminOnly) {
+      return isAdmin()
+    }
+    return true
+  })
+})
 </script>
 
 <template>
