@@ -10,7 +10,8 @@ import {
   Setting,
   Expand,
   Fold,
-  ArrowDown
+  ArrowDown,
+  Tools
 } from '@element-plus/icons-vue'
 import { clearUserInfo, isAdmin } from '@/utils/auth'
 
@@ -49,6 +50,11 @@ const baseMenuItems = [
     icon: 'Briefcase',
     title: '项目管理',
     index: '/dashboard/projects'
+  },
+  {
+    icon: 'Tools',
+    title: '工种管理',
+    index: '/dashboard/occupations'
   },
   {
     icon: 'Suitcase',

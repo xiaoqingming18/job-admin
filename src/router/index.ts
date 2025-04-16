@@ -69,6 +69,25 @@ const router = createRouter({
             requiresAuth: true
           }
         },
+        {
+          path: 'occupations',
+          name: 'occupations',
+          component: () => import('@/views/dashboard/occupations/index.vue'),
+          meta: {
+            title: '工种管理',
+            requiresAuth: true
+          }
+        },
+        {
+          path: 'occupations/category',
+          name: 'occupation-categories',
+          component: () => import('@/views/dashboard/occupations/category.vue'),
+          meta: {
+            title: '工种类别管理',
+            requiresAuth: true,
+            adminOnly: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },
