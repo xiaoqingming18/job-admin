@@ -60,6 +60,15 @@ const router = createRouter({
             adminOnly: true
           }
         },
+        {
+          path: 'projects',
+          name: 'projects',
+          component: () => import('@/views/dashboard/projects/index.vue'),
+          meta: {
+            title: '项目管理',
+            requiresAuth: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },
