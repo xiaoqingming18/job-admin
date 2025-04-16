@@ -1,4 +1,5 @@
 import { get, post, put } from '@/utils/request'
+import type { CompanyProjectListParams, CompanyProjectListResponse } from '@/types/project'
 
 /**
  * 项目模块 API 接口
@@ -83,4 +84,14 @@ export const getProjectList = (params: {
  */
 export const deleteProject = (id: number) => {
   return get(`/project/delete/${id}`)
+}
+
+/**
+ * 获取企业项目列表
+ * @param params 查询参数
+ * @returns Promise<CompanyProjectListResponse>
+ */
+export function getCompanyProjectList(params: CompanyProjectListParams): Promise<CompanyProjectListResponse> {
+  const { companyId, pageNum, pageSize } = params
+  return get<CompanyProjectListResponse>(`/project/company/${companyId}/list`, { pageNum, pageSize })
 }

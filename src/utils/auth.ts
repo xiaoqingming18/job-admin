@@ -1,4 +1,5 @@
 import { ElMessage } from 'element-plus'
+import { useCompanyStore } from '@/stores/company'
 
 /**
  * 检查用户是否为系统管理员
@@ -53,6 +54,11 @@ export const checkPermission = (requireAdmin = false, showMessage = true): boole
  * 清除用户信息
  */
 export const clearUserInfo = (): void => {
+  // 清除本地存储的用户信息
   localStorage.removeItem('token')
   localStorage.removeItem('userType')
+  
+  // 清除企业信息
+  const companyStore = useCompanyStore()
+  companyStore.clearCompanyInfo()
 } 

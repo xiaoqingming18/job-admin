@@ -1,4 +1,6 @@
 import { get, post, put, del } from '@/utils/request'
+import request from '@/utils/request'
+import type { CompanyInfoResponse } from '@/types/company'
 
 /**
  * 企业模块 API 接口
@@ -70,4 +72,9 @@ export const addProjectManager = (data: {
   position: string
 }) => {
   return post('/company/add-project-manager', data)
+}
+
+// 获取用户所属企业信息
+export function getUserCompanyInfo() {
+  return get<CompanyInfoResponse>('/user/company-info')
 }

@@ -53,6 +53,8 @@ import { useRouter } from 'vue-router'
 import type { FormInstance } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { adminLogin, companyAdminLogin, projectManagerLogin } from '@/api/user'
+import { useCompanyStore } from '@/stores/company'
+import { isCompanyAdmin, isProjectManager } from '@/utils/auth'
 
 interface LoginResponse {
   token: string
@@ -116,6 +118,17 @@ const handleLogin = async () => {
         localStorage.setItem('token', response.data.token)
         // 保存用户类型
         localStorage.setItem('userType', userType)
+
+        // 如果是企业管理员或项目经理，获取企业信息
+        if (userType === 'company' || userType === 'manager') {
+          const companyStore = useCompanyStore()
+          try {
+            await companyStore.fetchCompanyInfo()
+          } catch (error) {
+            console.error('获取企业信息失败:', error)
+            // 这里我们不阻止登录流程，只是记录错误
+          }
+        }
 
         ElMessage.success('登录成功')
         

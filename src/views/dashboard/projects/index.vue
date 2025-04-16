@@ -129,7 +129,9 @@
         <el-descriptions :column="1" border>
           <el-descriptions-item label="项目名称">{{ currentProject.name }}</el-descriptions-item>
           <el-descriptions-item label="所属企业">{{ currentProject.companyName }}</el-descriptions-item>
-          <el-descriptions-item label="所在地区">{{ currentProject.areaText || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="所在地区">
+            {{ `${currentProject.province || '-'}/${currentProject.city || '-'}/${currentProject.district || '-'}` }}
+          </el-descriptions-item>
           <el-descriptions-item label="项目类型">{{ formatProjectType(currentProject.projectType) }}</el-descriptions-item>
           <el-descriptions-item label="项目规模">{{ formatProjectScale(currentProject.projectScale) }}</el-descriptions-item>
           <el-descriptions-item label="项目状态">
@@ -248,7 +250,7 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitForm" :loading="submitting">
+          <el-button type="primary" @click="handleSubmit" :loading="submitting">
             确认
           </el-button>
         </div>
@@ -268,10 +270,12 @@ import {
   Refresh,
   View
 } from '@element-plus/icons-vue'
-import { getProjectList, updateProject, deleteProject, addProject } from '@/api/project'
+import { getProjectList, updateProject, deleteProject, addProject, getCompanyProjectList } from '@/api/project'
 import { getCompanyList } from '@/api/company'
-import { isAdmin } from '@/utils/auth'
+import { isAdmin, isCompanyAdmin, isProjectManager } from '@/utils/auth'
+import { useCompanyStore } from '@/stores/company'
 import { regionData, codeToText } from 'element-china-area-data'
+import type { Project, ProjectStatus } from '@/types/project'
 
 // 格式化日期
 const formatDate = (dateStr: string) => {
@@ -384,14 +388,43 @@ const fetchData = async () => {
       status: searchForm.status,
       projectType: searchForm.projectType
     }
-    const res = await getProjectList(params)
-    projectList.value = res.data.records || []
-    total.value = res.data.total || 0
-    currentPage.value = res.data.current || 1
-    pageSize.value = res.data.size || 10
-  } catch (error) {
+
+    let res
+    const companyStore = useCompanyStore()
+
+    // 根据用户角色决定调用哪个接口
+    if (isAdmin()) {
+      // 系统管理员可以查看所有项目
+      res = await getProjectList(params)
+      if (res.code === 0 && res.data) {
+        projectList.value = res.data.records || []
+        total.value = res.data.total || 0
+        currentPage.value = res.data.current || 1
+        pageSize.value = res.data.size || 10
+      } else {
+        throw new Error(res.message || '获取项目列表失败')
+      }
+    } else if ((isCompanyAdmin() || isProjectManager()) && companyStore.companyId) {
+      // 企业管理员和项目经理只能查看自己企业的项目
+      res = await getCompanyProjectList({
+        companyId: companyStore.companyId,
+        pageNum: currentPage.value,
+        pageSize: pageSize.value
+      })
+      if (res.code === 0) {
+        projectList.value = res.data || []
+        total.value = res.data.length // 由于没有分页信息，使用数组长度作为总数
+        currentPage.value = 1 // 固定为第一页
+        pageSize.value = res.data.length // 页大小设置为数组长度
+      } else {
+        throw new Error(res.message || '获取项目列表失败')
+      }
+    } else {
+      throw new Error('无权限访问项目列表')
+    }
+  } catch (error: any) {
     console.error('获取项目列表失败', error)
-    ElMessage.error('获取项目列表失败，请稍后再试')
+    ElMessage.error(error.message || '获取项目列表失败，请稍后再试')
   } finally {
     loading.value = false
   }
@@ -520,9 +553,9 @@ const handleAreaChange = (value: string[]) => {
     const area = value.map(code => codeToText[code]).join('/')
     form.areaText = area
     // 设置省市区字段
-    form.province = codeToText[value[0]] || ''
-    form.city = value.length > 1 ? codeToText[value[1]] || '' : ''
-    form.district = value.length > 2 ? codeToText[value[2]] || '' : ''
+    form.province = value[0] || ''
+    form.city = value[1] || ''
+    form.district = value[2] || ''
   } else {
     form.areaText = ''
     form.province = ''
@@ -537,48 +570,56 @@ const handleEdit = (row: any) => {
   form.id = row.id
   form.name = row.name
   form.companyId = row.companyId
+  
   // 处理区域数据
-  if (row.areaText) {
-    const areas = row.areaText.split('/')
-    if (areas.length === 3) {
-      try {
-        // 由于 TextToCode 已被移除，我们需要手动从 regionData 中查找对应的编码
-        const codes = []
-        let currentLevel = regionData
-        for (const area of areas) {
-          const found = currentLevel.find((item: any) => item.label === area)
-          if (found) {
-            codes.push(found.value)
-            currentLevel = found.children || []
+  const province = row.province
+  const city = row.city
+  const district = row.district
+  
+  if (province && city && district) {
+    try {
+      // 从 regionData 中查找对应的编码
+      const codes = []
+      let currentLevel = regionData
+      
+      // 查找省级编码
+      const provinceNode = currentLevel.find((item: any) => item.label === province)
+      if (provinceNode) {
+        codes.push(provinceNode.value)
+        currentLevel = provinceNode.children || []
+        
+        // 查找市级编码
+        const cityNode = currentLevel.find((item: any) => item.label === city)
+        if (cityNode) {
+          codes.push(cityNode.value)
+          currentLevel = cityNode.children || []
+          
+          // 查找区级编码
+          const districtNode = currentLevel.find((item: any) => item.label === district)
+          if (districtNode) {
+            codes.push(districtNode.value)
           }
         }
-        if (codes.length === 3) {
-          form.areaCode = codes
-          // 设置省市区字段
-          form.province = areas[0]
-          form.city = areas[1]
-          form.district = areas[2]
-        } else {
-          form.areaCode = []
-          form.province = ''
-          form.city = ''
-          form.district = ''
-        }
-      } catch (error) {
-        console.error('解析地区编码失败:', error)
-        form.areaCode = []
-        form.province = ''
-        form.city = ''
-        form.district = ''
       }
+      
+      if (codes.length === 3) {
+        form.areaCode = codes
+      } else {
+        form.areaCode = []
+      }
+    } catch (error) {
+      console.error('解析地区编码失败:', error)
+      form.areaCode = []
     }
   } else {
     form.areaCode = []
-    form.province = ''
-    form.city = ''
-    form.district = ''
   }
-  form.areaText = row.areaText || ''
+  
+  // 设置省市区字段
+  form.province = province || ''
+  form.city = city || ''
+  form.district = district || ''
+  
   form.address = row.address || ''
   form.projectType = row.projectType || ''
   form.projectScale = row.projectScale || ''
@@ -616,34 +657,48 @@ const handleAdd = async () => {
   
   dialogVisible.value = true
   
-  if (companyOptions.value.length === 0) {
+  // 只有系统管理员需要选择企业
+  if (isAdmin() && companyOptions.value.length === 0) {
     await fetchCompanyList()
+  } else {
+    // 企业管理员和项目经理自动使用所属企业
+    const companyStore = useCompanyStore()
+    if (companyStore.companyId) {
+      form.companyId = companyStore.companyId
+    }
   }
 }
 
 // 提交表单
-const submitForm = async () => {
+const handleSubmit = async () => {
   if (!formRef.value) return
-  await formRef.value.validate(async (valid) => {
+  await formRef.value.validate(async (valid: boolean) => {
     if (valid) {
-      submitting.value = true
+      const formData = { ...form }
+      
+      // 处理地区数据
+      if (formData.areaCode && formData.areaCode.length === 3) {
+        formData.province = codeToText[formData.areaCode[0]]
+        formData.city = codeToText[formData.areaCode[1]]
+        formData.district = codeToText[formData.areaCode[2]]
+      }
+      
       try {
+        loading.value = true
         if (isEdit.value) {
-          // 编辑项目时不再传 companyId
-          const { companyId, ...updateData } = form
-          await updateProject(updateData)
-          ElMessage.success('更新项目信息成功')
+          await updateProject(formData)
+          ElMessage.success('修改成功')
         } else {
-          await addProject(form)
-          ElMessage.success('添加项目成功')
+          await addProject(formData)
+          ElMessage.success('创建成功')
         }
         dialogVisible.value = false
-        fetchData()
-      } catch (error: any) {
-        const errorMessage = error.response?.data?.message || error.message || (isEdit.value ? '更新项目信息失败' : '添加项目失败')
-        ElMessage.error(errorMessage)
+        await fetchData()
+      } catch (error) {
+        console.error('提交失败:', error)
+        ElMessage.error('操作失败，请重试')
       } finally {
-        submitting.value = false
+        loading.value = false
       }
     }
   })
@@ -673,12 +728,20 @@ const handleDelete = (row: any) => {
 }
 
 // 加载初始数据
-onMounted(() => {
-  fetchData()
-  // 如果是管理员，预加载企业选项数据
-  if (isAdmin()) {
-    fetchCompanyList()
+onMounted(async () => {
+  // 如果是企业管理员或项目经理，确保先加载企业信息
+  if ((isCompanyAdmin() || isProjectManager()) && !useCompanyStore().hasCompanyInfo) {
+    try {
+      await useCompanyStore().fetchCompanyInfo()
+    } catch (error) {
+      console.error('获取企业信息失败:', error)
+      ElMessage.error('获取企业信息失败，请刷新页面重试')
+      return
+    }
   }
+  
+  // 加载项目列表
+  fetchData()
 })
 </script>
 
