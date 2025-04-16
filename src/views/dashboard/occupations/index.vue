@@ -304,22 +304,32 @@
             placeholder="请输入工种描述" 
           />
         </el-form-item>
-        <el-form-item label="图标URL" prop="icon">
-          <el-input v-model="form.icon" placeholder="请输入图标URL">
-            <template #append>
-              <el-button @click="previewIcon">
-                <el-icon><View /></el-icon>
+        <el-form-item label="工种图标" prop="icon">
+          <div class="icon-upload">
+            <el-upload
+              class="upload-component"
+              action="#"
+              :auto-upload="false"
+              :show-file-list="false"
+              accept="image/*"
+              :on-change="handleIconChange"
+            >
+              <el-button type="primary" :loading="uploading">
+                <el-icon><Upload /></el-icon>
+                选择图标
               </el-button>
-            </template>
-          </el-input>
+            </el-upload>
+            <div class="icon-preview" v-if="form.icon">
+              <el-avatar :size="60" :src="form.icon">
+                <el-icon><Tools /></el-icon>
+              </el-avatar>
+              <el-link type="danger" @click="removeIcon" class="remove-icon">
+                <el-icon><Delete /></el-icon>
+                移除图标
+              </el-link>
+            </div>
+          </div>
         </el-form-item>
-
-        <div v-if="form.icon" class="icon-preview">
-          <p>图标预览</p>
-          <el-avatar :size="60" :src="form.icon">
-            <el-icon><Tools /></el-icon>
-          </el-avatar>
-        </div>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
@@ -336,7 +346,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox, FormInstance } from 'element-plus'
+import { ElMessage, ElMessageBox, FormInstance, UploadFile } from 'element-plus'
 import {
   Plus,
   Edit,
@@ -345,7 +355,8 @@ import {
   Refresh,
   View,
   FolderAdd,
-  Tools
+  Tools,
+  Upload
 } from '@element-plus/icons-vue'
 import { 
   getOccupationPage, 
@@ -359,6 +370,7 @@ import {
   searchOccupation,
   getHotOccupations
 } from '@/api/occupation'
+import { upload } from '@/api/file'
 import { isAdmin as checkIsAdmin } from '@/utils/auth'
 import type { 
   Occupation, 
@@ -433,7 +445,6 @@ const certificateOptions = ref([
 // 是否有搜索条件
 const hasSearchFilters = computed(() => {
   return searchForm.name || 
-         searchForm.categoryId !== undefined || 
          searchForm.minWage !== undefined || 
          searchForm.maxWage !== undefined ||
          searchForm.difficultyLevel !== undefined
@@ -568,7 +579,14 @@ const getCategoryName = (categoryId: number) => {
 
 // 刷新数据
 const refreshData = () => {
-  fetchData()
+  fetchCategories().then(() => {
+    // 如果URL中有categoryId参数，设置激活的类别
+    if (route.query.categoryId) {
+      activeCategory.value = route.query.categoryId as string
+      searchForm.categoryId = parseInt(route.query.categoryId as string)
+    }
+    fetchData()
+  })
   fetchHotOccupations()
 }
 
@@ -743,14 +761,51 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
-// 预览图标
-const previewIcon = () => {
-  if (form.icon) {
-    // 这里实际项目中可能会使用更复杂的预览逻辑
-    ElMessage.success('已加载图标预览')
-  } else {
-    ElMessage.warning('请先输入图标URL')
+// 图标上传相关
+const uploading = ref(false)
+
+// 处理图标文件变化
+const handleIconChange = async (file: UploadFile) => {
+  if (!file.raw) {
+    ElMessage.error('文件上传失败')
+    return
   }
+
+  // 验证文件类型
+  const isImage = file.raw.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件！')
+    return
+  }
+
+  // 验证文件大小（2MB）
+  const isLt2M = file.raw.size / 1024 / 1024 < 2
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB！')
+    return
+  }
+
+  uploading.value = true
+  try {
+    const res = await upload(file.raw, 'occupation-icons')
+    if (res.code === 0 && res.data) {
+      form.icon = res.data.url
+      ElMessage.success('图标上传成功')
+    } else {
+      throw new Error(res.message || '图标上传失败')
+    }
+  } catch (error: any) {
+    console.error('图标上传失败', error)
+    ElMessage.error(error.message || '图标上传失败，请稍后再试')
+  } finally {
+    uploading.value = false
+  }
+}
+
+// 移除图标
+const removeIcon = () => {
+  form.icon = ''
+  ElMessage.success('已移除图标')
 }
 
 // 提交表单
@@ -1122,16 +1177,25 @@ onMounted(() => {
   gap: 12px;
 }
 
-.icon-preview {
-  margin-top: 20px;
-  text-align: center;
-  border-top: 1px dashed #dcdfe6;
-  padding-top: 20px;
+.icon-upload {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
-.icon-preview p {
-  margin-bottom: 10px;
-  color: #909399;
+.icon-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.remove-icon {
+  font-size: 12px;
+}
+
+.remove-icon :deep(.el-icon) {
+  margin-right: 4px;
 }
 
 :deep(.el-carousel__item) {

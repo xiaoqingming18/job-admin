@@ -5,14 +5,6 @@ import { get } from '@/utils/request'
  */
 
 /**
- * 获取系统管理员看板数据
- * @returns Promise
- */
-export const getAdminDashboardData = () => {
-  return get('/dashboard/admin-overview')
-}
-
-/**
  * 获取企业管理员看板数据
  * @returns Promise
  */
@@ -29,15 +21,6 @@ export const getProjectManagerDashboardData = () => {
 }
 
 /**
- * 获取待办事项列表
- * @param params 查询参数
- * @returns Promise
- */
-export const getTodoList = (params: any) => {
-  return get('/dashboard/todo-list', params)
-}
-
-/**
  * 根据用户角色获取相应的看板数据
  * @param userType 用户类型: admin/company-admin/project-manager
  * @returns Promise
@@ -45,7 +28,16 @@ export const getTodoList = (params: any) => {
 export const getDashboardDataByRole = (userType: string) => {
   switch (userType) {
     case 'admin':
-      return getAdminDashboardData()
+      // 系统管理员使用模拟数据
+      return Promise.resolve({
+        code: 0,
+        data: {
+          totalCompanies: 256,
+          totalProjects: 145,
+          totalJobs: 432,
+          totalUsers: 1240
+        }
+      })
     case 'company':
       return getCompanyAdminDashboardData()
     case 'manager':

@@ -60,24 +60,6 @@ export const updateProjectStatus = (data: {
 }
 
 /**
- * 获取项目列表
- * @param params 查询参数
- * @returns Promise
- */
-export const getProjectList = (params: {
-  current?: number
-  size?: number
-  name?: string
-  companyId?: number
-  status?: string
-  projectType?: string
-  startDateBegin?: string
-  startDateEnd?: string
-}) => {
-  return post('/project/list', params)
-}
-
-/**
  * 删除项目
  * @param id 项目ID
  * @returns Promise

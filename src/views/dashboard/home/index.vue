@@ -8,7 +8,7 @@ import {
   Document,
   Bell
 } from '@element-plus/icons-vue'
-import { getDashboardDataByRole, getTodoList } from '@/api/dashboard'
+import { getDashboardDataByRole } from '@/api/dashboard'
 import { isAdmin, isCompanyAdmin, isProjectManager, getUserType } from '@/utils/auth'
 
 const overviewData = ref({
@@ -175,30 +175,17 @@ const loadDashboardData = async () => {
       }
     }
     
-    // 加载待办事项
-    loadTodoList()
+    // 直接使用模拟待办事项
+    mockTodoData()
   } catch (error) {
     console.error('获取看板数据失败', error)
     ElMessage.error('获取看板数据失败，请稍后再试')
     
     // 模拟数据用于开发测试
     mockDashboardData()
+    mockTodoData()
   } finally {
     isLoading.value = false
-  }
-}
-
-// 加载待办事项
-const loadTodoList = async () => {
-  try {
-    const res = await getTodoList({ limit: 5 })
-    if (res && res.data) {
-      todos.value = res.data
-    }
-  } catch (error) {
-    console.error('获取待办事项失败', error)
-    // 模拟数据用于开发测试
-    mockTodoData()
   }
 }
 

@@ -381,32 +381,11 @@ const handleSearch = () => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const params = {
-      current: currentPage.value,
-      size: pageSize.value,
-      name: searchForm.name,
-      status: searchForm.status,
-      projectType: searchForm.projectType
-    }
-
-    let res
     const companyStore = useCompanyStore()
 
-    // 根据用户角色决定调用哪个接口
-    if (isAdmin()) {
-      // 系统管理员可以查看所有项目
-      res = await getProjectList(params)
-      if (res.code === 0 && res.data) {
-        projectList.value = res.data.records || []
-        total.value = res.data.total || 0
-        currentPage.value = res.data.current || 1
-        pageSize.value = res.data.size || 10
-      } else {
-        throw new Error(res.message || '获取项目列表失败')
-      }
-    } else if ((isCompanyAdmin() || isProjectManager()) && companyStore.companyId) {
+    if ((isCompanyAdmin() || isProjectManager()) && companyStore.companyId) {
       // 企业管理员和项目经理只能查看自己企业的项目
-      res = await getCompanyProjectList({
+      const res = await getCompanyProjectList({
         companyId: companyStore.companyId,
         pageNum: currentPage.value,
         pageSize: pageSize.value
@@ -419,6 +398,49 @@ const fetchData = async () => {
       } else {
         throw new Error(res.message || '获取项目列表失败')
       }
+    } else if (isAdmin()) {
+      // 系统管理员使用模拟数据
+      projectList.value = [
+        {
+          id: 1,
+          name: '某某住宅小区项目',
+          status: 'in_progress',
+          projectType: 'residence',
+          projectScale: 'big',
+          address: '北京市朝阳区',
+          startDate: '2024-01-01',
+          expectedEndDate: '2025-12-31',
+          budget: 50000000,
+          description: '大型住宅小区建设项目'
+        },
+        {
+          id: 2,
+          name: '某某商业广场项目',
+          status: 'pending',
+          projectType: 'commerce',
+          projectScale: 'medium',
+          address: '上海市浦东新区',
+          startDate: '2024-03-01',
+          expectedEndDate: '2025-06-30',
+          budget: 30000000,
+          description: '商业广场建设项目'
+        },
+        {
+          id: 3,
+          name: '某某工业园区项目',
+          status: 'completed',
+          projectType: 'industry',
+          projectScale: 'big',
+          address: '广州市番禺区',
+          startDate: '2023-06-01',
+          expectedEndDate: '2024-12-31',
+          budget: 80000000,
+          description: '工业园区建设项目'
+        }
+      ]
+      total.value = projectList.value.length
+      currentPage.value = 1
+      pageSize.value = projectList.value.length
     } else {
       throw new Error('无权限访问项目列表')
     }
