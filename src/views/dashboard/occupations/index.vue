@@ -381,9 +381,13 @@ import type {
   UpdateOccupationParams,
   UpdateOccupationStatusParams
 } from '@/types/occupation'
+import { useStore } from 'vuex'
 
 const route = useRoute()
 const router = useRouter()
+const store = useStore()
+
+const isAdmin = computed(() => store.getters.isAdmin)
 
 // 格式化货币
 const formatCurrency = (value: number) => {
@@ -888,11 +892,6 @@ const handleDelete = (row: OccupationListItem | Occupation) => {
     ElMessage.info('已取消删除')
   })
 }
-
-// 管理员权限检查计算属性
-const isAdmin = computed(() => {
-  return checkIsAdmin()
-})
 
 // 监听路由参数变化
 watch(() => route.query, (query) => {

@@ -52,9 +52,16 @@ const baseMenuItems = [
     index: '/dashboard/projects'
   },
   {
+    icon: 'User',
+    title: '项目经理管理',
+    index: '/dashboard/managers',
+    companyAdminOnly: true // 标记为仅企业管理员可见
+  },
+  {
     icon: 'Tools',
     title: '工种管理',
-    index: '/dashboard/occupations'
+    index: '/dashboard/occupations',
+    adminOnly: true // 标记为仅管理员可见
   },
   {
     icon: 'Suitcase',
@@ -79,6 +86,10 @@ const menuItems = computed(() => {
     // 如果菜单项标记为仅管理员可见，则只在用户类型为admin时显示
     if (item.adminOnly) {
       return isAdmin()
+    }
+    // 如果菜单项标记为仅企业管理员可见，则只在用户类型为company时显示
+    if (item.companyAdminOnly) {
+      return userType.value === 'company'
     }
     return true
   })

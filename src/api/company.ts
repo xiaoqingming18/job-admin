@@ -1,6 +1,6 @@
 import { get, post, put, del } from '@/utils/request'
 import request from '@/utils/request'
-import type { CompanyInfoResponse } from '@/types/company'
+import type { CompanyInfoResponse, CompanyInfo, ProjectManagerListResponse, AddProjectManagerParams } from '@/types/company'
 
 /**
  * 企业模块 API 接口
@@ -61,17 +61,30 @@ export const addCompany = (data: any) => {
 }
 
 /**
- * 添加项目经理
- * @param data 项目经理信息
+ * 获取企业项目经理列表
+ * @param companyId 企业ID
+ * @returns 项目经理列表
  */
-export const addProjectManager = (data: {
-  companyId: number
-  username: string
-  password: string
-  email: string
-  position: string
-}) => {
-  return post('/company/add-project-manager', data)
+export const getCompanyManagerList = (companyId: number) => {
+  return get<ProjectManagerListResponse>(`/company/project-managers/${companyId}`)
+}
+
+/**
+ * 添加项目经理
+ * @param params 添加项目经理参数
+ * @returns 操作结果
+ */
+export const addProjectManager = (params: AddProjectManagerParams) => {
+  return post('/company/add-project-manager', params)
+}
+
+/**
+ * 删除项目经理
+ * @param managerId 项目经理ID
+ * @returns 操作结果
+ */
+export const deleteProjectManager = (managerId: number) => {
+  return post(`/company/manager/${managerId}/delete`)
 }
 
 // 获取用户所属企业信息

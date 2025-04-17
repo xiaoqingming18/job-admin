@@ -44,4 +44,33 @@ export interface CompanyProjectListResponse {
   code: number
   data: Project[]
   message: string
+}
+
+// 项目列表查询参数
+export interface ProjectListParams extends PageParams {
+  keyword?: string
+  province?: string
+  city?: string
+  district?: string
+  projectType?: string
+  projectScale?: string
+  status?: string
+  companyId?: number
+  startDateBegin?: string
+  startDateEnd?: string
+  page?: number
+  size?: number
+}
+
+// 项目列表响应
+export interface ProjectListResponse {
+  code: number
+  data: {
+    pageNum: number
+    pageSize: number
+    total: number
+    totalPages: number
+    list: Project[]
+  }
+  message: string
 } 

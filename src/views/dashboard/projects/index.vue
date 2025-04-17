@@ -129,6 +129,7 @@
         <el-descriptions :column="1" border>
           <el-descriptions-item label="项目名称">{{ currentProject.name }}</el-descriptions-item>
           <el-descriptions-item label="所属企业">{{ currentProject.companyName }}</el-descriptions-item>
+          <el-descriptions-item label="项目经理">{{ currentProject.projectManagerName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="所在地区">
             {{ `${currentProject.province || '-'}/${currentProject.city || '-'}/${currentProject.district || '-'}` }}
           </el-descriptions-item>
@@ -139,7 +140,6 @@
               {{ formatStatus(currentProject.status) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="项目经理">{{ currentProject.projectManagerName }}</el-descriptions-item>
           <el-descriptions-item label="开始日期">{{ formatDate(currentProject.startDate) }}</el-descriptions-item>
           <el-descriptions-item label="预计结束日期">{{ formatDate(currentProject.expectedEndDate) }}</el-descriptions-item>
           <el-descriptions-item label="总面积">{{ currentProject.totalArea }} 平方米</el-descriptions-item>
@@ -172,13 +172,23 @@
         <el-form-item label="项目名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入项目名称" />
         </el-form-item>
-        <el-form-item label="所属企业" prop="companyId" v-if="!isEdit">
-          <el-select v-model="form.companyId" placeholder="请选择所属企业" filterable>
+        <el-form-item label="所属企业" prop="companyId" v-if="!isEdit && isAdmin()">
+          <el-select v-model="form.companyId" placeholder="请选择所属企业" filterable @change="handleCompanyChange">
             <el-option 
               v-for="company in companyOptions" 
               :key="company.id" 
               :label="company.name" 
               :value="company.id" 
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="项目经理" prop="projectManagerId">
+          <el-select v-model="form.projectManagerId" placeholder="请选择项目经理" filterable>
+            <el-option 
+              v-for="manager in projectManagerOptions" 
+              :key="manager.id" 
+              :label="manager.name" 
+              :value="manager.id" 
             />
           </el-select>
         </el-form-item>
@@ -271,11 +281,12 @@ import {
   View
 } from '@element-plus/icons-vue'
 import { getProjectList, updateProject, deleteProject, addProject, getCompanyProjectList } from '@/api/project'
-import { getCompanyList } from '@/api/company'
+import { getCompanyList, getCompanyManagerList } from '@/api/company'
 import { isAdmin, isCompanyAdmin, isProjectManager } from '@/utils/auth'
 import { useCompanyStore } from '@/stores/company'
 import { regionData, codeToText } from 'element-china-area-data'
 import type { Project, ProjectStatus } from '@/types/project'
+import type { ProjectManager } from '@/types/company'
 
 // 格式化日期
 const formatDate = (dateStr: string) => {
@@ -391,7 +402,16 @@ const fetchData = async () => {
         pageSize: pageSize.value
       })
       if (res.code === 0) {
-        projectList.value = res.data || []
+        // 为项目添加企业名称
+        const companyName = companyStore.companyName || '';
+        const projectsWithCompanyName = res.data.map((project: any) => {
+          if (!project.companyName) {
+            return { ...project, companyName }
+          }
+          return project
+        })
+        
+        projectList.value = projectsWithCompanyName || []
         total.value = res.data.length // 由于没有分页信息，使用数组长度作为总数
         currentPage.value = 1 // 固定为第一页
         pageSize.value = res.data.length // 页大小设置为数组长度
@@ -399,48 +419,36 @@ const fetchData = async () => {
         throw new Error(res.message || '获取项目列表失败')
       }
     } else if (isAdmin()) {
-      // 系统管理员使用模拟数据
-      projectList.value = [
-        {
-          id: 1,
-          name: '某某住宅小区项目',
-          status: 'in_progress',
-          projectType: 'residence',
-          projectScale: 'big',
-          address: '北京市朝阳区',
-          startDate: '2024-01-01',
-          expectedEndDate: '2025-12-31',
-          budget: 50000000,
-          description: '大型住宅小区建设项目'
-        },
-        {
-          id: 2,
-          name: '某某商业广场项目',
-          status: 'pending',
-          projectType: 'commerce',
-          projectScale: 'medium',
-          address: '上海市浦东新区',
-          startDate: '2024-03-01',
-          expectedEndDate: '2025-06-30',
-          budget: 30000000,
-          description: '商业广场建设项目'
-        },
-        {
-          id: 3,
-          name: '某某工业园区项目',
-          status: 'completed',
-          projectType: 'industry',
-          projectScale: 'big',
-          address: '广州市番禺区',
-          startDate: '2023-06-01',
-          expectedEndDate: '2024-12-31',
-          budget: 80000000,
-          description: '工业园区建设项目'
-        }
-      ]
-      total.value = projectList.value.length
-      currentPage.value = 1
-      pageSize.value = projectList.value.length
+      // 系统管理员可以查看所有项目
+      const res = await getProjectList({
+        keyword: searchForm.name,
+        status: searchForm.status,
+        projectType: searchForm.projectType,
+        page: currentPage.value,
+        size: pageSize.value
+      })
+      
+      if (res.code === 0 && res.data) {
+        // 处理企业名称信息
+        const projectsWithCompanyName = res.data.list.map((project: any) => {
+          // 如果项目中已包含companyName则直接使用，否则根据companyId查找
+          if (!project.companyName && project.companyId) {
+            // 尝试查找企业名称
+            const company = companyOptions.value.find(c => c.id === project.companyId)
+            if (company) {
+              return { ...project, companyName: company.name }
+            }
+          }
+          return project
+        })
+        
+        projectList.value = projectsWithCompanyName || []
+        total.value = res.data.total || 0
+        currentPage.value = res.data.pageNum || 1
+        pageSize.value = res.data.pageSize || 10
+      } else {
+        throw new Error(res.message || '获取项目列表失败')
+      }
     } else {
       throw new Error('无权限访问项目列表')
     }
@@ -486,6 +494,9 @@ const handleDetail = (row: any) => {
 // 企业选项
 const companyOptions = ref<Array<{ id: number; name: string }>>([])
 
+// 项目经理选项
+const projectManagerOptions = ref<Array<{ id: number; name: string }>>([])
+
 // 获取企业列表
 const fetchCompanyList = async () => {
   try {
@@ -503,17 +514,62 @@ const fetchCompanyList = async () => {
   }
 }
 
+// 监听企业选择变更，加载对应企业的项目经理
+const handleCompanyChange = async (companyId: number) => {
+  if (!companyId) {
+    projectManagerOptions.value = []
+    form.projectManagerId = undefined
+    return
+  }
+  
+  try {
+    const res = await getCompanyManagerList(companyId)
+    if (res.code === 0 && res.data) {
+      // 转换项目经理数据为下拉选项格式
+      projectManagerOptions.value = res.data.map((manager: ProjectManager) => ({
+        id: manager.userId,
+        name: `${manager.username}${manager.position ? ` (${manager.position})` : ''}`
+      }))
+    } else {
+      throw new Error(res.message || '获取项目经理列表失败')
+    }
+  } catch (error: any) {
+    console.error('获取项目经理列表失败:', error)
+    ElMessage.error(error.message || '获取项目经理列表失败，请稍后再试')
+    projectManagerOptions.value = []
+  }
+}
+
+// 加载当前企业的项目经理列表
+const loadManagerListForCurrentCompany = async () => {
+  const companyStore = useCompanyStore()
+  if (companyStore.companyId) {
+    try {
+      const res = await getCompanyManagerList(companyStore.companyId)
+      if (res.code === 0 && res.data) {
+        projectManagerOptions.value = res.data.map((manager: ProjectManager) => ({
+          id: manager.userId,
+          name: `${manager.username}${manager.position ? ` (${manager.position})` : ''}`
+        }))
+      }
+    } catch (error) {
+      console.error('获取项目经理列表失败:', error)
+    }
+  }
+}
+
 // 编辑表单相关
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const submitting = ref(false)
 const formRef = ref<FormInstance>()
 
-// 在 form reactive 对象中修改区域相关字段
+// 在 form reactive 对象中添加项目经理ID字段
 const form = reactive({
   id: 0,
   name: '',
   companyId: undefined as number | undefined,
+  projectManagerId: undefined as number | undefined, // 项目经理ID
   areaCode: [], // 省市区编码数组
   areaText: '', // 省市区文本
   province: '', // 省份
@@ -530,14 +586,17 @@ const form = reactive({
   status: 'pending'
 })
 
-// 在 rules 对象中修改区域验证规则
+// 在项目表单的验证规则中添加项目经理字段验证
 const rules = {
   name: [
     { required: true, message: '请输入项目名称', trigger: 'blur' },
     { max: 100, message: '长度不能超过100个字符', trigger: 'blur' }
   ],
   companyId: [
-    { required: true, message: '请选择所属企业', trigger: 'change' }
+    { required: isAdmin, message: '请选择所属企业', trigger: 'change' }
+  ],
+  projectManagerId: [
+    { required: true, message: '请选择项目经理', trigger: 'change' }
   ],
   areaCode: [
     { required: true, message: '请选择所在地区', trigger: 'change' }
@@ -587,11 +646,27 @@ const handleAreaChange = (value: string[]) => {
 }
 
 // 编辑项目
-const handleEdit = (row: any) => {
+const handleEdit = async (row: any) => {
   isEdit.value = true
   form.id = row.id
   form.name = row.name
   form.companyId = row.companyId
+  form.projectManagerId = row.projectManagerId
+  
+  // 如果项目有关联企业，加载该企业的项目经理列表
+  if (row.companyId) {
+    try {
+      const res = await getCompanyManagerList(row.companyId)
+      if (res.code === 0 && res.data) {
+        projectManagerOptions.value = res.data.map((manager: ProjectManager) => ({
+          id: manager.userId,
+          name: `${manager.username}${manager.position ? ` (${manager.position})` : ''}`
+        }))
+      }
+    } catch (error) {
+      console.error('获取项目经理列表失败:', error)
+    }
+  }
   
   // 处理区域数据
   const province = row.province
@@ -662,6 +737,7 @@ const handleAdd = async () => {
   form.id = 0
   form.name = ''
   form.companyId = undefined
+  form.projectManagerId = undefined
   form.areaCode = []
   form.areaText = ''
   form.province = ''
@@ -687,6 +763,8 @@ const handleAdd = async () => {
     const companyStore = useCompanyStore()
     if (companyStore.companyId) {
       form.companyId = companyStore.companyId
+      // 加载该企业的项目经理
+      await loadManagerListForCurrentCompany()
     }
   }
 }
@@ -703,6 +781,16 @@ const handleSubmit = async () => {
         formData.province = codeToText[formData.areaCode[0]]
         formData.city = codeToText[formData.areaCode[1]]
         formData.district = codeToText[formData.areaCode[2]]
+      }
+      
+      // 如果是企业管理员，确保使用当前企业ID
+      if (!isAdmin()) {
+        const companyStore = useCompanyStore()
+        if (companyStore.companyId) {
+          formData.companyId = companyStore.companyId
+        } else {
+          throw new Error('无法获取企业信息，请刷新页面重试')
+        }
       }
       
       try {
@@ -759,6 +847,16 @@ onMounted(async () => {
       console.error('获取企业信息失败:', error)
       ElMessage.error('获取企业信息失败，请刷新页面重试')
       return
+    }
+  }
+  
+  // 如果是系统管理员，先加载企业列表
+  if (isAdmin()) {
+    await fetchCompanyList()
+  } else {
+    // 如果是企业管理员，加载该企业的项目经理列表
+    if (isCompanyAdmin()) {
+      await loadManagerListForCurrentCompany()
     }
   }
   

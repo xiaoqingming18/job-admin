@@ -71,21 +71,33 @@ const router = createRouter({
         },
         {
           path: 'occupations',
-          name: 'occupations',
+          name: 'Occupations',
           component: () => import('@/views/dashboard/occupations/index.vue'),
           meta: {
             title: '工种管理',
-            requiresAuth: true
+            requiresAuth: true,
+            icon: 'el-icon-s-grid'
           }
         },
         {
           path: 'occupations/category',
-          name: 'occupation-categories',
+          name: 'OccupationCategories',
           component: () => import('@/views/dashboard/occupations/category.vue'),
           meta: {
             title: '工种类别管理',
             requiresAuth: true,
-            adminOnly: true
+            adminOnly: true,
+            icon: 'el-icon-s-grid'
+          }
+        },
+        {
+          path: 'managers',
+          name: 'managers',
+          component: () => import('@/views/dashboard/managers/index.vue'),
+          meta: {
+            title: '项目经理管理',
+            requiresAuth: true,
+            companyAdminOnly: true
           }
         },
         // 其他子路由可以在这里添加
@@ -129,6 +141,17 @@ router.beforeEach((to, from, next) => {
           return
         }
       }
+      
+      // 检查是否是企业管理员限制的路由
+      if (to.matched.some(record => record.meta.companyAdminOnly)) {
+        const userType = localStorage.getItem('userType')
+        if (userType !== 'company') {
+          ElMessage.error('该页面仅限企业管理员访问')
+          next({ path: '/dashboard' })
+          return
+        }
+      }
+      
       next()
     }
   } else {

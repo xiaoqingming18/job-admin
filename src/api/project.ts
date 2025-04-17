@@ -1,5 +1,5 @@
 import { get, post, put } from '@/utils/request'
-import type { CompanyProjectListParams, CompanyProjectListResponse } from '@/types/project'
+import type { CompanyProjectListParams, CompanyProjectListResponse, ProjectListParams, ProjectListResponse } from '@/types/project'
 
 /**
  * 项目模块 API 接口
@@ -20,6 +20,7 @@ export const addProject = (data: {
   totalArea: number
   budget: number
   description: string
+  projectManagerId?: number
 }) => {
   return post('/project/add', data)
 }
@@ -44,6 +45,11 @@ export const updateProject = (data: {
   expectedEndDate?: string
   budget?: number
   description?: string
+  projectManagerId?: number
+  projectType?: string
+  projectScale?: string
+  totalArea?: number
+  status?: string
 }) => {
   return put('/project/update', data)
 }
@@ -76,4 +82,13 @@ export const deleteProject = (id: number) => {
 export function getCompanyProjectList(params: CompanyProjectListParams): Promise<CompanyProjectListResponse> {
   const { companyId, pageNum, pageSize } = params
   return get<CompanyProjectListResponse>(`/project/company/${companyId}/list`, { pageNum, pageSize })
+}
+
+/**
+ * 获取所有项目列表（分页）
+ * @param params 查询参数
+ * @returns Promise<ProjectListResponse>
+ */
+export function getProjectList(params: ProjectListParams): Promise<ProjectListResponse> {
+  return get<ProjectListResponse>('/project/page', params)
 }
