@@ -73,4 +73,11 @@ export interface ProjectListResponse {
     list: Project[]
   }
   message: string
+}
+
+// 项目经理管理的项目列表响应
+export interface ManagerProjectListResponse {
+  code: number
+  data: Project[]
+  message: string
 } 

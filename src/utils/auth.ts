@@ -34,6 +34,15 @@ export const getUserType = (): string => {
 }
 
 /**
+ * 获取当前用户ID
+ * @returns 用户ID或null
+ */
+export const getUserId = (): number | null => {
+  const userId = localStorage.getItem('userId')
+  return userId ? Number(userId) : null
+}
+
+/**
  * 检查用户是否有权限访问特定页面
  * @param requireAdmin 是否需要管理员权限
  * @param showMessage 是否显示错误消息
@@ -57,6 +66,7 @@ export const clearUserInfo = (): void => {
   // 清除本地存储的用户信息
   localStorage.removeItem('token')
   localStorage.removeItem('userType')
+  localStorage.removeItem('userId')
   
   // 清除企业信息
   const companyStore = useCompanyStore()

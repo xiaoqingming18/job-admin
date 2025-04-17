@@ -1,5 +1,5 @@
 import { get, post, put } from '@/utils/request'
-import type { CompanyProjectListParams, CompanyProjectListResponse, ProjectListParams, ProjectListResponse } from '@/types/project'
+import type { CompanyProjectListParams, CompanyProjectListResponse, ProjectListParams, ProjectListResponse, ManagerProjectListResponse } from '@/types/project'
 
 /**
  * 项目模块 API 接口
@@ -91,4 +91,13 @@ export function getCompanyProjectList(params: CompanyProjectListParams): Promise
  */
 export function getProjectList(params: ProjectListParams): Promise<ProjectListResponse> {
   return get<ProjectListResponse>('/project/page', params)
+}
+
+/**
+ * 获取项目经理管理的项目列表
+ * @param managerId 项目经理ID
+ * @returns Promise<ManagerProjectListResponse>
+ */
+export function getManagerProjectList(managerId: number): Promise<ManagerProjectListResponse> {
+  return get<ManagerProjectListResponse>(`/project/manager/${managerId}`)
 }

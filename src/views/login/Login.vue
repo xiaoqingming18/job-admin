@@ -56,8 +56,34 @@ import { adminLogin, companyAdminLogin, projectManagerLogin } from '@/api/user'
 import { useCompanyStore } from '@/stores/company'
 import { isCompanyAdmin, isProjectManager } from '@/utils/auth'
 
+/**
+ * 从JWT令牌中解析用户ID
+ * @param token JWT令牌
+ * @returns 用户ID或undefined
+ */
+const extractUserIdFromToken = (token: string): number | undefined => {
+  try {
+    // JWT令牌由三部分组成，以点(.)分隔，第二部分是payload
+    const payload = token.split('.')[1];
+    // Base64解码
+    const decodedPayload = atob(payload);
+    // 解析JSON
+    const data = JSON.parse(decodedPayload);
+    // 返回userId
+    return data.userId;
+  } catch (error) {
+    console.error('解析令牌失败:', error);
+    return undefined;
+  }
+};
+
 interface LoginResponse {
-  token: string
+  code: number;
+  data: {
+    token: string;
+    userId?: number;
+  };
+  message: string;
 }
 
 const router = useRouter()
@@ -115,9 +141,20 @@ const handleLogin = async () => {
         }
 
         // 保存token
-        localStorage.setItem('token', response.data.token)
+        const token = response.data.token;
+        localStorage.setItem('token', token);
         // 保存用户类型
-        localStorage.setItem('userType', userType)
+        localStorage.setItem('userType', userType);
+        // 保存用户ID
+        if (response.data.userId) {
+          localStorage.setItem('userId', response.data.userId.toString());
+        } else {
+          // 尝试从令牌中解析userId
+          const userId = extractUserIdFromToken(token);
+          if (userId) {
+            localStorage.setItem('userId', userId.toString());
+          }
+        }
 
         // 如果是企业管理员或项目经理，获取企业信息
         if (userType === 'company' || userType === 'manager') {

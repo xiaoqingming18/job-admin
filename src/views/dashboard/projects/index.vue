@@ -7,7 +7,7 @@
         <span class="subtitle">管理系统中的建筑项目信息</span>
       </div>
       <div class="actions-section">
-        <el-button type="primary" @click="handleAdd">
+        <el-button type="primary" @click="handleAdd" v-if="!isProjectManager()">
           <el-icon><Plus /></el-icon>添加项目
         </el-button>
         <el-button @click="refreshList">
@@ -280,9 +280,9 @@ import {
   Refresh,
   View
 } from '@element-plus/icons-vue'
-import { getProjectList, updateProject, deleteProject, addProject, getCompanyProjectList } from '@/api/project'
+import { getProjectList, updateProject, deleteProject, addProject, getCompanyProjectList, getManagerProjectList } from '@/api/project'
 import { getCompanyList, getCompanyManagerList } from '@/api/company'
-import { isAdmin, isCompanyAdmin, isProjectManager } from '@/utils/auth'
+import { isAdmin, isCompanyAdmin, isProjectManager, getUserId } from '@/utils/auth'
 import { useCompanyStore } from '@/stores/company'
 import { regionData, codeToText } from 'element-china-area-data'
 import type { Project, ProjectStatus } from '@/types/project'
@@ -394,8 +394,24 @@ const fetchData = async () => {
   try {
     const companyStore = useCompanyStore()
 
-    if ((isCompanyAdmin() || isProjectManager()) && companyStore.companyId) {
-      // 企业管理员和项目经理只能查看自己企业的项目
+    if (isProjectManager()) {
+      // 项目经理只能查看自己管理的项目
+      const managerId = getUserId()
+      if (!managerId) {
+        throw new Error('无法获取用户信息，请重新登录')
+      }
+      
+      const res = await getManagerProjectList(managerId)
+      if (res.code === 0) {
+        projectList.value = res.data || []
+        total.value = res.data.length // 使用数组长度作为总数
+        currentPage.value = 1 // 固定为第一页
+        pageSize.value = res.data.length // 页大小设置为数组长度
+      } else {
+        throw new Error(res.message || '获取项目列表失败')
+      }
+    } else if (isCompanyAdmin() && companyStore.companyId) {
+      // 企业管理员只能查看自己企业的项目
       const res = await getCompanyProjectList({
         companyId: companyStore.companyId,
         pageNum: currentPage.value,
