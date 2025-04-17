@@ -7,10 +7,10 @@
         <span class="subtitle">管理系统中的工种信息</span>
       </div>
       <div class="actions-section">
-        <el-button type="primary" @click="handleAdd" v-if="isAdmin">
+        <el-button type="primary" @click="handleAdd" v-if="isAdminUser">
           <el-icon><Plus /></el-icon>添加工种
         </el-button>
-        <el-button type="success" @click="$router.push('/dashboard/occupations/category')" v-if="isAdmin">
+        <el-button type="success" @click="$router.push('/dashboard/occupations/category')" v-if="isAdminUser">
           <el-icon><FolderAdd /></el-icon>类别管理
         </el-button>
         <el-button @click="refreshData">
@@ -106,7 +106,7 @@
               </el-avatar>
               <el-icon v-else :size="36"><Tools /></el-icon>
             </div>
-            <div class="occupation-status" v-if="isAdmin">
+            <div class="occupation-status" v-if="isAdminUser">
               <el-switch
                 v-model="item.status"
                 :active-value="1"
@@ -128,7 +128,7 @@
             </div>
             <div class="occupation-wage">{{ formatCurrency(item.averageDailyWage) }}/天</div>
           </div>
-          <div class="occupation-actions" v-if="isAdmin">
+          <div class="occupation-actions" v-if="isAdminUser">
             <el-button link type="primary" @click.stop="handleEdit(item)">
               <el-icon><Edit /></el-icon>
             </el-button>
@@ -227,7 +227,7 @@
         </el-descriptions>
 
         <div class="drawer-footer">
-          <el-button-group v-if="isAdmin">
+          <el-button-group v-if="isAdminUser">
             <el-button type="primary" @click="handleEdit(currentOccupation)">编辑信息</el-button>
             <el-button type="warning" @click="handleStatusToggle">
               {{ currentOccupation.status === 1 ? '禁用工种' : '启用工种' }}
@@ -371,7 +371,7 @@ import {
   getHotOccupations
 } from '@/api/occupation'
 import { upload } from '@/api/file'
-import { isAdmin as checkIsAdmin } from '@/utils/auth'
+import { isAdmin } from '@/utils/auth'
 import type { 
   Occupation, 
   OccupationListItem, 
@@ -381,13 +381,11 @@ import type {
   UpdateOccupationParams,
   UpdateOccupationStatusParams
 } from '@/types/occupation'
-import { useStore } from 'vuex'
 
 const route = useRoute()
 const router = useRouter()
-const store = useStore()
 
-const isAdmin = computed(() => store.getters.isAdmin)
+const isAdminUser = computed(() => isAdmin())
 
 // 格式化货币
 const formatCurrency = (value: number) => {
