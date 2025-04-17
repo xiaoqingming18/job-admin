@@ -19,7 +19,7 @@ export enum LaborDemandStatus {
 export enum LaborDemandStatusString {
   Open = 'open',         // 开放中
   Filled = 'filled',     // 已满
-  Canceled = 'canceled', // 已取消
+  Cancelled = 'cancelled', // 已取消
   Expired = 'expired'    // 已过期
 }
 
@@ -86,7 +86,7 @@ export interface LaborDemandQueryParams extends PageParams {
   projectId?: number
   occupationId?: number
   occupationCategoryId?: number
-  status?: LaborDemandStatus
+  status?: string | LaborDemandStatus
   startDateBegin?: string
   startDateEnd?: string
   endDateBegin?: string
@@ -236,7 +236,7 @@ export interface UpdateLaborDemandParamsNew {
  */
 export interface UpdateLaborDemandStatusParamsNew {
   id: number
-  status: LaborDemandStatusString
+  status: string
 }
 
 /**
@@ -246,4 +246,80 @@ export interface LaborDemandResponse<T = any> {
   code: number
   data: T
   message: string
+}
+
+/**
+ * 劳务需求列表项（新查询API）
+ */
+export interface LaborDemandListItemNew {
+  id: number
+  projectId: number
+  projectName: string
+  jobTypeId: number
+  jobTypeName: string
+  headcount: number
+  dailyWage: number
+  startDate: string
+  endDate: string
+  workHours: string
+  requirements?: string
+  accommodation: boolean
+  meals: boolean
+  status: string
+  createTime: string
+  updateTime?: string
+}
+
+/**
+ * 劳务需求分页查询参数
+ */
+export interface LaborDemandPageQueryParams {
+  page?: number
+  size?: number
+  projectId?: number
+  status?: string
+  jobTypeId?: number
+  companyId?: number
+}
+
+/**
+ * 劳务需求分页查询响应
+ */
+export interface LaborDemandPageResponse {
+  code: number
+  data: {
+    records: LaborDemandListItemNew[]
+    total: number
+    size: number
+    current: number
+    orders: any[]
+    searchCount: boolean
+    pages: number
+  }
+  message: string
+}
+
+/**
+ * 劳务需求列表响应
+ */
+export interface LaborDemandListResponseNew {
+  code: number
+  data: LaborDemandListItemNew[]
+  message: string
+}
+
+/**
+ * 劳务需求搜索参数
+ */
+export interface LaborDemandSearchParams {
+  keyword?: string
+  province?: string
+  city?: string
+  district?: string
+  minDailyWage?: number
+  maxDailyWage?: number
+  startDateFrom?: string
+  startDateTo?: string
+  page?: number
+  size?: number
 } 

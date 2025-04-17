@@ -4,7 +4,11 @@ import type {
   LaborDemandDetail,
   UpdateLaborDemandParamsNew,
   UpdateLaborDemandStatusParamsNew,
-  LaborDemandResponse
+  LaborDemandResponse,
+  LaborDemandPageQueryParams,
+  LaborDemandPageResponse,
+  LaborDemandListResponseNew,
+  LaborDemandSearchParams
 } from '@/types/labor'
 
 /**
@@ -54,4 +58,40 @@ export function removeLaborDemand(id: number): Promise<LaborDemandResponse<boole
  */
 export function changeLaborDemandStatus(params: UpdateLaborDemandStatusParamsNew): Promise<LaborDemandResponse<LaborDemandDetail>> {
   return put<LaborDemandResponse<LaborDemandDetail>>('/labor-demand/status', params)
+}
+
+/**
+ * 分页查询劳务需求
+ * @param params 查询参数
+ * @returns Promise<LaborDemandPageResponse>
+ */
+export function getLaborDemandPage(params: LaborDemandPageQueryParams): Promise<LaborDemandPageResponse> {
+  return post<LaborDemandPageResponse>('/labor-demand/list', params)
+}
+
+/**
+ * 查询项目下的所有劳务需求
+ * @param projectId 项目ID
+ * @returns Promise<LaborDemandListResponseNew>
+ */
+export function getLaborDemandsByProject(projectId: number): Promise<LaborDemandListResponseNew> {
+  return get<LaborDemandListResponseNew>(`/labor-demand/by-project/${projectId}`)
+}
+
+/**
+ * 搜索劳务需求
+ * @param params 搜索参数
+ * @returns Promise<LaborDemandPageResponse>
+ */
+export function searchLaborDemands(params: LaborDemandSearchParams): Promise<LaborDemandPageResponse> {
+  return get<LaborDemandPageResponse>('/labor-demand/search', params)
+}
+
+/**
+ * 获取热门/推荐劳务需求
+ * @param limit 返回数量，默认10
+ * @returns Promise<LaborDemandListResponseNew>
+ */
+export function getRecommendedLaborDemands(limit: number = 10): Promise<LaborDemandListResponseNew> {
+  return get<LaborDemandListResponseNew>('/labor-demand/recommended', { limit })
 } 

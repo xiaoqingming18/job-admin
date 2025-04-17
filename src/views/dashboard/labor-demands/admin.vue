@@ -54,13 +54,10 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="草稿" :value="0" />
-            <el-option label="待审核" :value="1" />
-            <el-option label="已批准" :value="2" />
-            <el-option label="已拒绝" :value="3" />
-            <el-option label="进行中" :value="4" />
-            <el-option label="已完成" :value="5" />
-            <el-option label="已取消" :value="6" />
+            <el-option label="开放中" value="open" />
+            <el-option label="已满" value="filled" />
+            <el-option label="已取消" value="cancelled" />
+            <el-option label="已过期" value="expired" />
           </el-select>
         </el-form-item>
         <el-form-item label="开始日期">
@@ -88,47 +85,70 @@
 
     <!-- 数据表格 -->
     <el-card v-loading="loading" class="table-container" shadow="hover">
-      <el-table :data="tableData" style="width: 100%" border stripe>
+      <el-table :data="tableDataNew" style="width: 100%" border stripe>
         <el-table-column type="index" width="50" />
-        <el-table-column prop="title" label="需求标题" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="companyName" label="所属企业" min-width="120" show-overflow-tooltip />
         <el-table-column prop="projectName" label="所属项目" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="occupationName" label="工种" min-width="100" />
-        <el-table-column prop="requiredCount" label="需求人数" width="100" align="center" />
-        <el-table-column prop="dailyWage" label="日薪" width="100" align="center">
+        <el-table-column prop="jobTypeName" label="工种" min-width="100" />
+        <el-table-column prop="headcount" label="需求人数" width="100" align="center" />
+        <el-table-column prop="dailyWage" label="日薪" width="120">
           <template #default="scope">
             {{ formatCurrency(scope.row.dailyWage) }}
           </template>
         </el-table-column>
-        <el-table-column prop="startDate" label="开始日期" width="120" />
-        <el-table-column prop="endDate" label="结束日期" width="120" />
+        <el-table-column prop="startDate" label="开始日期" width="120">
+          <template #default="scope">
+            {{ formatDate(scope.row.startDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="endDate" label="结束日期" width="120">
+          <template #default="scope">
+            {{ formatDate(scope.row.endDate) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="workHours" label="工作时间" width="120" />
+        <el-table-column label="食宿" width="100">
+          <template #default="scope">
+            <div>
+              <el-tag size="small" type="success" v-if="scope.row.accommodation">提供住宿</el-tag>
+              <el-tag size="small" type="info" v-else>不提供住宿</el-tag>
+            </div>
+            <div style="margin-top: 5px">
+              <el-tag size="small" type="success" v-if="scope.row.meals">提供餐食</el-tag>
+              <el-tag size="small" type="info" v-else>不提供餐食</el-tag>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
-            <el-tag :type="getStatusType(scope.row.status)">
-              {{ formatStatus(scope.row.status) }}
+            <el-tag :type="getNewStatusType(scope.row.status)">
+              {{ formatNewStatus(scope.row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="150" />
+        <el-table-column prop="createTime" label="创建时间" width="150">
+          <template #default="scope">
+            {{ formatDate(scope.row.createTime) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
-            <el-button type="primary" link size="small" @click="handleDetail(scope.row)">
+            <el-button type="primary" link size="small" @click="handleDetailNew(scope.row.id)">
               <el-icon><View /></el-icon>查看
             </el-button>
-            <el-dropdown trigger="click" @command="(command) => handleOperationCommand(command, scope.row)">
+            <el-dropdown trigger="click" @command="(command) => handleNewApiOperation(command, scope.row)">
               <el-button link type="primary" size="small">
                 更多<el-icon class="el-icon--right"><arrow-down /></el-icon>
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item v-if="scope.row.status === 1" command="approve">批准</el-dropdown-item>
-                  <el-dropdown-item v-if="scope.row.status === 1" command="reject">拒绝</el-dropdown-item>
-                  <el-dropdown-item divided command="details-new">新API查看</el-dropdown-item>
                   <el-dropdown-item command="status-open">设为开放中</el-dropdown-item>
                   <el-dropdown-item command="status-filled">设为已满</el-dropdown-item>
-                  <el-dropdown-item command="status-canceled">设为已取消</el-dropdown-item>
+                  <el-dropdown-item command="status-cancelled">设为已取消</el-dropdown-item>
                   <el-dropdown-item command="status-expired">设为已过期</el-dropdown-item>
                   <el-dropdown-item divided command="delete" style="color: #F56C6C;">删除</el-dropdown-item>
+                  <el-dropdown-item v-if="scope.row.projectId" divided command="project-demands">
+                    查看同项目需求
+                  </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -173,15 +193,15 @@
           <el-descriptions-item label="需求人数">{{ currentDemand.requiredCount }} 人</el-descriptions-item>
           <el-descriptions-item label="日薪">{{ formatCurrency(currentDemand.dailyWage) }}</el-descriptions-item>
           <el-descriptions-item label="总预算">{{ formatCurrency(currentDemand.totalBudget) }}</el-descriptions-item>
-          <el-descriptions-item label="开始日期">{{ currentDemand.startDate }}</el-descriptions-item>
-          <el-descriptions-item label="结束日期">{{ currentDemand.endDate }}</el-descriptions-item>
+          <el-descriptions-item label="开始日期">{{ formatDate(currentDemand.startDate) }}</el-descriptions-item>
+          <el-descriptions-item label="结束日期">{{ formatDate(currentDemand.endDate) }}</el-descriptions-item>
           <el-descriptions-item label="联系人">{{ currentDemand.contactPerson }}</el-descriptions-item>
           <el-descriptions-item label="联系电话">{{ currentDemand.contactPhone }}</el-descriptions-item>
           <el-descriptions-item label="需求描述">{{ currentDemand.description || '无' }}</el-descriptions-item>
           <el-descriptions-item label="岗位要求">{{ currentDemand.requirements || '无' }}</el-descriptions-item>
           <el-descriptions-item label="创建人">{{ currentDemand.createdByName }}</el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ currentDemand.createTime }}</el-descriptions-item>
-          <el-descriptions-item label="最后更新时间">{{ currentDemand.updateTime || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDate(currentDemand.createTime) }}</el-descriptions-item>
+          <el-descriptions-item label="最后更新时间">{{ formatDate(currentDemand.updateTime) || '-' }}</el-descriptions-item>
           <el-descriptions-item v-if="currentDemand.status >= 2" label="审批人">
             {{ currentDemand.approvedByName || '-' }}
           </el-descriptions-item>
@@ -246,28 +266,28 @@
           <el-descriptions-item label="工种名称">{{ currentDemandNew.jobTypeName }}</el-descriptions-item>
           <el-descriptions-item label="需求人数">{{ currentDemandNew.headcount }} 人</el-descriptions-item>
           <el-descriptions-item label="日薪">{{ formatCurrency(currentDemandNew.dailyWage) }}</el-descriptions-item>
-          <el-descriptions-item label="开始日期">{{ currentDemandNew.startDate }}</el-descriptions-item>
-          <el-descriptions-item label="结束日期">{{ currentDemandNew.endDate }}</el-descriptions-item>
+          <el-descriptions-item label="开始日期">{{ formatDate(currentDemandNew.startDate) }}</el-descriptions-item>
+          <el-descriptions-item label="结束日期">{{ formatDate(currentDemandNew.endDate) }}</el-descriptions-item>
           <el-descriptions-item label="工作时间">{{ currentDemandNew.workHours }}</el-descriptions-item>
           <el-descriptions-item label="岗位要求">{{ currentDemandNew.requirements || '无' }}</el-descriptions-item>
           <el-descriptions-item label="提供住宿">{{ currentDemandNew.accommodation ? '是' : '否' }}</el-descriptions-item>
           <el-descriptions-item label="提供餐食">{{ currentDemandNew.meals ? '是' : '否' }}</el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ currentDemandNew.createTime }}</el-descriptions-item>
-          <el-descriptions-item label="最后更新时间">{{ currentDemandNew.updateTime || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDate(currentDemandNew.createTime) }}</el-descriptions-item>
+          <el-descriptions-item label="最后更新时间">{{ formatDate(currentDemandNew.updateTime) || '-' }}</el-descriptions-item>
         </el-descriptions>
 
         <div class="drawer-footer">
           <el-button-group>
-            <el-button type="success" @click="handleStatusChange(currentDemandNew.id, LaborDemandStatusString.Open)">
+            <el-button type="success" @click="handleStatusChange(currentDemandNew.id, 'open')">
               设为开放中
             </el-button>
-            <el-button type="info" @click="handleStatusChange(currentDemandNew.id, LaborDemandStatusString.Filled)">
+            <el-button type="info" @click="handleStatusChange(currentDemandNew.id, 'filled')">
               设为已满
             </el-button>
-            <el-button type="danger" @click="handleStatusChange(currentDemandNew.id, LaborDemandStatusString.Canceled)">
+            <el-button type="danger" @click="handleStatusChange(currentDemandNew.id, 'cancelled')">
               设为已取消
             </el-button>
-            <el-button type="warning" @click="handleStatusChange(currentDemandNew.id, LaborDemandStatusString.Expired)">
+            <el-button type="warning" @click="handleStatusChange(currentDemandNew.id, 'expired')">
               设为已过期
             </el-button>
           </el-button-group>
@@ -406,7 +426,10 @@ import {
   getLaborDemandById,
   changeLaborDemandStatus,
   removeLaborDemand,
-  createLaborDemand
+  createLaborDemand,
+  getLaborDemandPage,
+  getLaborDemandsByProject,
+  searchLaborDemands
 } from '@/api/laborDemand'
 import { getCompanyProjectList } from '@/api/project'
 import { getCompanyList } from '@/api/company'
@@ -417,8 +440,18 @@ import type {
   LaborDemandListItem, 
   LaborDemandStatus, 
   LaborDemandDetail,
-  LaborDemandStatusString
+  LaborDemandPageQueryParams,
+  LaborDemandSearchParams,
+  LaborDemandListItemNew
 } from '@/types/labor'
+
+// Define the LaborDemandStatusString enum since it's missing
+enum LaborDemandStatusString {
+  Open = 'open',         // 开放中
+  Filled = 'filled',     // 已满
+  Cancelled = 'cancelled', // 已取消
+  Expired = 'expired'    // 已过期
+}
 
 // 格式化货币
 const formatCurrency = (value: number) => {
@@ -456,15 +489,25 @@ const getStatusType = (status: LaborDemandStatus) => {
   return typeMap[status] || ''
 }
 
-// 加载状态
-const loading = ref(false)
-const submitting = ref(false)
+// 格式化日期
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return '-'
+  // 将ISO格式日期转换为YYYY-MM-DD格式
+  const date = new Date(dateString)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
 
 // 表格数据
 const tableData = ref<LaborDemandListItem[]>([])
+const tableDataNew = ref<LaborDemandListItemNew[]>([])
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(10)
+
+// 加载状态
+const loading = ref(false)
+const submitting = ref(false)
+const useNewApi = ref(true) // 始终使用新API
 
 // 搜索表单
 const searchForm = reactive({
@@ -472,7 +515,7 @@ const searchForm = reactive({
   companyId: undefined as number | undefined,
   projectId: undefined as number | undefined,
   occupationId: undefined as number | undefined,
-  status: undefined as LaborDemandStatus | undefined,
+  status: undefined as string | undefined,
   startDateBegin: undefined as string | undefined,
   startDateEnd: undefined as string | undefined,
   endDateBegin: undefined as string | undefined,
@@ -510,7 +553,7 @@ const handleEndDateChange = (dates: string[]) => {
 // 搜索
 const handleSearch = () => {
   currentPage.value = 1
-  fetchData()
+  refreshData()
 }
 
 // 重置搜索
@@ -532,7 +575,7 @@ const resetSearch = () => {
   
   // 重新加载数据
   currentPage.value = 1
-  fetchData()
+  refreshData()
 }
 
 // 获取数据
@@ -560,30 +603,122 @@ const fetchData = async () => {
   }
 }
 
-// 刷新数据
-const refreshData = () => {
-  fetchData()
-}
-
-// 测试新API
-const testNewApi = async () => {
+// 使用新API获取数据
+const fetchDataWithNewApi = async () => {
+  loading.value = true
   try {
-    // 尝试获取第一个劳务需求的详情，测试新API是否可用
-    const firstRow = tableData.value[0]
-    if (firstRow) {
-      console.log('测试新API: 尝试获取劳务需求详情', firstRow.id)
-      const res = await getLaborDemandById(firstRow.id)
-      console.log('新API响应:', res)
-      if (res.code === 0) {
-        ElMessage.success('新的劳务需求API可用')
-        return true
+    // 构建查询参数
+    const queryParams: LaborDemandPageQueryParams = {
+      page: currentPage.value,
+      size: pageSize.value
+    }
+    
+    // 添加筛选条件
+    if (searchForm.projectId) queryParams.projectId = searchForm.projectId
+    if (searchForm.companyId) queryParams.companyId = searchForm.companyId
+    if (searchForm.occupationId) queryParams.jobTypeId = searchForm.occupationId
+    if (searchForm.status !== undefined) {
+      // 字符串状态可以直接使用
+      if (typeof searchForm.status === 'string') {
+        queryParams.status = searchForm.status;
+      } 
+      // 将数字状态转换为字符串状态
+      else if (typeof searchForm.status === 'number') {
+        switch (searchForm.status) {
+          case LaborDemandStatus.Draft: 
+          case LaborDemandStatus.Pending:
+          case LaborDemandStatus.Approved:
+          case LaborDemandStatus.InProgress:
+            queryParams.status = 'open';
+            break;
+          case LaborDemandStatus.Completed:
+            queryParams.status = 'filled';
+            break;
+          case LaborDemandStatus.Rejected:
+          case LaborDemandStatus.Canceled:
+            queryParams.status = 'cancelled';
+            break;
+          default:
+            // 默认不设置状态
+            break;
+        }
       }
     }
-  } catch (error) {
-    console.error('新API测试失败:', error)
+    
+    console.log('新API查询参数:', queryParams)
+    
+    // 调用新API
+    const res = await getLaborDemandPage(queryParams)
+    
+    if (res.code === 0 && res.data) {
+      // 更新tableDataNew和分页数据
+      tableDataNew.value = res.data.records || []
+      // 如果total为0但有records数据，则设置total为records的长度
+      total.value = res.data.total || res.data.records.length || 0
+      
+      // 日志输出结果
+      console.log('新API查询结果:', res.data)
+      console.log('tableDataNew:', tableDataNew.value)
+      
+      return true
+    } else {
+      throw new Error(res.message || '获取劳务需求列表失败')
+    }
+  } catch (error: any) {
+    console.error('使用新API获取劳务需求列表失败', error)
+    ElMessage.error(error.message || '获取劳务需求列表失败，请稍后再试')
     return false
+  } finally {
+    loading.value = false
   }
-  return false
+}
+
+// 按项目ID获取劳务需求
+const fetchLaborDemandsByProject = async (projectId: number) => {
+  loading.value = true
+  try {
+    const res = await getLaborDemandsByProject(projectId)
+    
+    if (res.code === 0 && res.data) {
+      ElMessage.success(`已加载 ${res.data.length} 条项目相关的劳务需求`)
+      return res.data
+    } else {
+      throw new Error(res.message || '获取项目劳务需求失败')
+    }
+  } catch (error: any) {
+    console.error('获取项目劳务需求失败', error)
+    ElMessage.error(error.message || '获取项目劳务需求失败，请稍后再试')
+    return []
+  } finally {
+    loading.value = false
+  }
+}
+
+// 搜索劳务需求
+const searchLaborDemandsWithNewApi = async (params: LaborDemandSearchParams) => {
+  loading.value = true
+  try {
+    const res = await searchLaborDemands({
+      ...params,
+      page: currentPage.value,
+      size: pageSize.value
+    })
+    
+    if (res.code === 0 && res.data) {
+      tableDataNew.value = res.data.records || []
+      total.value = res.data.total || res.data.records.length || 0
+      
+      return true
+    } else {
+      throw new Error(res.message || '搜索劳务需求失败')
+    }
+  } catch (error: any) {
+    console.error('搜索劳务需求失败', error)
+    ElMessage.error(error.message || '搜索劳务需求失败，请稍后再试')
+    return false
+  } finally {
+    loading.value = false
+  }
 }
 
 // 选项数据
@@ -715,7 +850,7 @@ const handleDetailNew = async (id: number) => {
 }
 
 // 修改劳务需求状态 (使用新API)
-const handleStatusChange = async (id: number, status: LaborDemandStatusString) => {
+const handleStatusChange = async (id: number, status: string) => {
   try {
     const confirmMessage = `确定要将此劳务需求状态改为"${formatNewStatus(status)}"吗？`
     
@@ -737,7 +872,7 @@ const handleStatusChange = async (id: number, status: LaborDemandStatusString) =
       if (drawerVisible.value) {
         drawerVisible.value = false
       }
-      fetchData()
+      refreshData()
     } else {
       throw new Error(res.message || '更新状态失败')
     }
@@ -785,12 +920,12 @@ const handleDelete = async (id: number) => {
 }
 
 // 格式化新API的状态
-const formatNewStatus = (status: LaborDemandStatusString) => {
+const formatNewStatus = (status: string) => {
   const statusMap: Record<string, string> = {
-    [LaborDemandStatusString.Open]: '开放中',
-    [LaborDemandStatusString.Filled]: '已满',
-    [LaborDemandStatusString.Canceled]: '已取消',
-    [LaborDemandStatusString.Expired]: '已过期'
+    'open': '开放中',
+    'filled': '已满',
+    'cancelled': '已取消',
+    'expired': '已过期'
   }
   return statusMap[status] || '未知状态'
 }
@@ -798,10 +933,10 @@ const formatNewStatus = (status: LaborDemandStatusString) => {
 // 获取新API状态对应的类型
 const getNewStatusType = (status: string) => {
   const typeMap: Record<string, string> = {
-    [LaborDemandStatusString.Open]: 'success',
-    [LaborDemandStatusString.Filled]: 'info',
-    [LaborDemandStatusString.Canceled]: 'danger',
-    [LaborDemandStatusString.Expired]: 'warning'
+    'open': 'success',
+    'filled': 'info',
+    'cancelled': 'danger',
+    'expired': 'warning'
   }
   return typeMap[status] || ''
 }
@@ -876,12 +1011,12 @@ const confirmReject = async () => {
 // 页码和每页数量变化
 const handleSizeChange = (newSize: number) => {
   pageSize.value = newSize
-  fetchData()
+  refreshData()
 }
 
 const handleCurrentChange = (newPage: number) => {
   currentPage.value = newPage
-  fetchData()
+  refreshData()
 }
 
 // 处理dropdown操作
@@ -897,22 +1032,69 @@ const handleOperationCommand = (command: string, row: LaborDemandListItem) => {
       handleDetailNew(row.id)
       break
     case 'status-open':
-      handleStatusChange(row.id, LaborDemandStatusString.Open)
+      handleStatusChange(row.id, 'open')
       break
     case 'status-filled':
-      handleStatusChange(row.id, LaborDemandStatusString.Filled)
+      handleStatusChange(row.id, 'filled')
       break
-    case 'status-canceled':
-      handleStatusChange(row.id, LaborDemandStatusString.Canceled)
+    case 'status-cancelled':
+      handleStatusChange(row.id, 'cancelled')
       break
     case 'status-expired':
-      handleStatusChange(row.id, LaborDemandStatusString.Expired)
+      handleStatusChange(row.id, 'expired')
       break
     case 'delete':
       handleDelete(row.id)
       break
     default:
       console.warn('未知操作:', command)
+  }
+}
+
+// 处理新API的dropdown操作
+const handleNewApiOperation = (command: string, row: LaborDemandListItemNew) => {
+  switch (command) {
+    case 'status-open':
+      handleStatusChange(row.id, 'open')
+      break
+    case 'status-filled':
+      handleStatusChange(row.id, 'filled')
+      break
+    case 'status-cancelled':
+      handleStatusChange(row.id, 'cancelled')
+      break
+    case 'status-expired':
+      handleStatusChange(row.id, 'expired')
+      break
+    case 'delete':
+      handleDelete(row.id)
+      break
+    case 'project-demands':
+      handleViewProjectDemands(row.projectId)
+      break
+    default:
+      console.warn('未知操作:', command)
+  }
+}
+
+// 查看项目需求
+const handleViewProjectDemands = async (projectId: number) => {
+  try {
+    const demands = await fetchLaborDemandsByProject(projectId)
+    
+    if (demands.length > 0) {
+      // 更新表格数据
+      tableDataNew.value = demands
+      
+      // 更新过滤条件
+      searchForm.projectId = projectId
+      
+      ElMessage.success(`已加载项目ID为 ${projectId} 的所有劳务需求`)
+    } else {
+      ElMessage.info(`项目ID为 ${projectId} 的劳务需求为空`)
+    }
+  } catch (error) {
+    console.error('获取项目需求失败', error)
   }
 }
 
@@ -1150,20 +1332,19 @@ const handleNumberInput = (value: string, field: 'headcount' | 'dailyWage') => {
   }
 }
 
+// 刷新数据
+const refreshData = () => {
+  fetchDataWithNewApi()
+}
+
 // 初始化
 onMounted(async () => {
   fetchCompanyList()
   fetchProjectList()
   fetchOccupationList()
-  await fetchData()
   
-  // 测试新API是否可用
-  const newApiAvailable = await testNewApi()
-  if (newApiAvailable) {
-    console.log('新API可用，可以使用新的功能')
-  } else {
-    console.log('新API不可用，使用原有功能')
-  }
+  // 直接加载数据，无需尝试
+  fetchDataWithNewApi()
 })
 </script>
 
