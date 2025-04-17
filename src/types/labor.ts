@@ -14,6 +14,16 @@ export enum LaborDemandStatus {
 }
 
 /**
+ * 劳务需求状态（字符串枚举，用于新API）
+ */
+export enum LaborDemandStatusString {
+  Open = 'open',         // 开放中
+  Filled = 'filled',     // 已满
+  Canceled = 'canceled', // 已取消
+  Expired = 'expired'    // 已过期
+}
+
+/**
  * 劳务需求类型
  */
 export interface LaborDemand {
@@ -165,5 +175,75 @@ export interface ProjectLaborDemandListResponse {
 export interface CompanyLaborDemandListResponse {
   code: number
   data: LaborDemandListItem[]
+  message: string
+}
+
+/**
+ * 创建劳务需求参数（新API）
+ */
+export interface CreateLaborDemandParams {
+  projectId: number
+  jobTypeId: number
+  headcount: number
+  dailyWage: number
+  startDate: string
+  endDate: string
+  workHours: string
+  requirements?: string
+  accommodation: boolean
+  meals: boolean
+}
+
+/**
+ * 劳务需求详情（新API）
+ */
+export interface LaborDemandDetail {
+  id: number
+  projectId: number
+  projectName: string
+  jobTypeId: number
+  jobTypeName: string
+  headcount: number
+  dailyWage: number
+  startDate: string
+  endDate: string
+  workHours: string
+  requirements?: string
+  accommodation: boolean
+  meals: boolean
+  status: string
+  createTime: string
+  updateTime?: string
+}
+
+/**
+ * 更新劳务需求参数（新API）
+ */
+export interface UpdateLaborDemandParamsNew {
+  id: number
+  headcount?: number
+  dailyWage?: number
+  startDate?: string
+  endDate?: string
+  workHours?: string
+  requirements?: string
+  accommodation?: boolean
+  meals?: boolean
+}
+
+/**
+ * 更新劳务需求状态参数（新API）
+ */
+export interface UpdateLaborDemandStatusParamsNew {
+  id: number
+  status: LaborDemandStatusString
+}
+
+/**
+ * 通用响应类型（新API）
+ */
+export interface LaborDemandResponse<T = any> {
+  code: number
+  data: T
   message: string
 } 
