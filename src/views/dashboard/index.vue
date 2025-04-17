@@ -65,6 +65,11 @@ const baseMenuItems = [
   },
   {
     icon: 'Suitcase',
+    title: '劳务需求管理',
+    index: '/dashboard/labor-demands'
+  },
+  {
+    icon: 'Suitcase',
     title: '职位管理',
     index: '/dashboard/jobs'
   },

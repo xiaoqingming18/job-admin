@@ -100,6 +100,57 @@ const router = createRouter({
             companyAdminOnly: true
           }
         },
+        {
+          path: 'labor-demands',
+          name: 'labor-demands',
+          meta: {
+            title: '劳务需求管理',
+            requiresAuth: true
+          },
+          redirect: to => {
+            // 根据用户类型重定向到不同的劳务需求管理页面
+            const userType = localStorage.getItem('userType')
+            if (userType === 'admin') {
+              return { name: 'labor-demands-admin' }
+            } else if (userType === 'company') {
+              return { name: 'labor-demands-company' }
+            } else if (userType === 'manager') {
+              return { name: 'labor-demands-manager' }
+            } else {
+              return { name: 'dashboard-home' }
+            }
+          }
+        },
+        {
+          path: 'labor-demands/admin',
+          name: 'labor-demands-admin',
+          component: () => import('@/views/dashboard/labor-demands/admin.vue'),
+          meta: {
+            title: '劳务需求管理 - 系统管理员',
+            requiresAuth: true,
+            adminOnly: true
+          }
+        },
+        {
+          path: 'labor-demands/company',
+          name: 'labor-demands-company',
+          component: () => import('@/views/dashboard/labor-demands/company.vue'),
+          meta: {
+            title: '劳务需求管理 - 企业管理员',
+            requiresAuth: true,
+            companyAdminOnly: true
+          }
+        },
+        {
+          path: 'labor-demands/manager',
+          name: 'labor-demands-manager',
+          component: () => import('@/views/dashboard/labor-demands/manager.vue'),
+          meta: {
+            title: '劳务需求管理 - 项目经理',
+            requiresAuth: true,
+            managerOnly: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },
