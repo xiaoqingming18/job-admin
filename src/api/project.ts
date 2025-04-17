@@ -20,7 +20,7 @@ export const addProject = (data: {
   totalArea: number
   budget: number
   description: string
-  projectManagerId?: number
+  projectManagerId: number
 }) => {
   return post('/project/add', data)
 }
