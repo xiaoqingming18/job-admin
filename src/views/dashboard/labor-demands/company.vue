@@ -320,7 +320,7 @@ import {
   getLaborDemandsByProject,
   searchLaborDemands
 } from '@/api/laborDemand'
-import { getProjectList } from '@/api/project'
+import { getProjectList, getCompanyProjectList } from '@/api/project'
 import { getOccupationPage } from '@/api/occupation'
 import { useCompanyStore } from '@/stores/company'
 import type { 
@@ -503,7 +503,7 @@ const fetchData = async () => {
         projectName: item.projectName,
         companyId: companyId,
         companyName: companyStore.companyName || '',
-        title: item.projectName, // 使用项目名称作为标题
+        title: item.title || '未设置标题', // 使用实际的标题，若为空则显示默认文本
         occupationId: item.jobTypeId,
         occupationName: item.jobTypeName,
         requiredCount: item.headcount,
@@ -544,18 +544,25 @@ const fetchProjectList = async () => {
       throw new Error('无法获取企业信息')
     }
     
-    const res = await getProjectList({
+    const res = await getCompanyProjectList({
       companyId: companyId,
-      page: 1,
-      size: 1000 // 获取所有项目，用于下拉选择
+      pageNum: 1,
+      pageSize: 1000 // 获取所有项目，用于下拉选择
     })
     
-    projectOptions.value = (res.data.list || []).map((item: any) => ({
-      id: item.id,
-      name: item.name
-    }))
-  } catch (error) {
+    if (res.code === 0 && res.data) {
+      // 直接使用data数组，而不是data.list
+      projectOptions.value = res.data.map((item: any) => ({
+        id: item.id,
+        name: item.name
+      }))
+      console.log('项目列表已加载:', projectOptions.value)
+    } else {
+      throw new Error(res.message || '获取项目列表失败')
+    }
+  } catch (error: any) {
     console.error('获取项目列表失败', error)
+    ElMessage.error(error.message || '获取项目列表失败，请稍后再试')
   }
 }
 
@@ -645,7 +652,7 @@ const rules = {
 }
 
 // 添加需求
-const handleAdd = () => {
+const handleAdd = async () => {
   isEdit.value = false
   form.projectId = undefined
   form.title = ''
@@ -658,6 +665,14 @@ const handleAdd = () => {
   form.requirements = ''
   form.accommodation = false
   form.meals = false
+  
+  // 确保项目列表和工种列表已加载
+  if (projectOptions.value.length === 0) {
+    await fetchProjectList()
+  }
+  if (occupationOptions.value.length === 0) {
+    await fetchOccupationList()
+  }
   
   dialogVisible.value = true
 }
