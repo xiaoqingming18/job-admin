@@ -44,13 +44,10 @@
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="草稿" :value="0" />
-            <el-option label="待审核" :value="1" />
-            <el-option label="已批准" :value="2" />
-            <el-option label="已拒绝" :value="3" />
-            <el-option label="进行中" :value="4" />
-            <el-option label="已完成" :value="5" />
-            <el-option label="已取消" :value="6" />
+            <el-option label="开放中" value="open" />
+            <el-option label="已满" value="filled" />
+            <el-option label="已取消" value="cancelled" />
+            <el-option label="已过期" value="expired" />
           </el-select>
         </el-form-item>
         <el-form-item label="开始日期">
@@ -105,7 +102,7 @@
               <el-icon><View /></el-icon>查看
             </el-button>
             <el-button 
-              v-if="scope.row.status === 0" 
+              v-if="scope.row.status === 'open'" 
               type="success" 
               link 
               size="small" 
@@ -114,7 +111,7 @@
               提交
             </el-button>
             <el-button 
-              v-if="[0, 3].includes(scope.row.status)" 
+              v-if="['open', 'filled'].includes(scope.row.status)" 
               type="primary" 
               link 
               size="small" 
@@ -123,7 +120,7 @@
               编辑
             </el-button>
             <el-button 
-              v-if="[0, 3, 6].includes(scope.row.status)" 
+              v-if="['open', 'filled'].includes(scope.row.status)" 
               type="danger" 
               link 
               size="small" 
@@ -180,28 +177,25 @@
           <el-descriptions-item label="创建人">{{ currentDemand.createdByName }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ currentDemand.createTime }}</el-descriptions-item>
           <el-descriptions-item label="最后更新时间">{{ currentDemand.updateTime || '-' }}</el-descriptions-item>
-          <el-descriptions-item v-if="currentDemand.status >= 2" label="审批人">
+          <el-descriptions-item v-if="['filled', 'completed'].includes(currentDemand.status)" label="审批人">
             {{ currentDemand.approvedByName || '-' }}
           </el-descriptions-item>
-          <el-descriptions-item v-if="currentDemand.status >= 2" label="审批时间">
+          <el-descriptions-item v-if="['filled', 'completed'].includes(currentDemand.status)" label="审批时间">
             {{ currentDemand.approvedTime || '-' }}
           </el-descriptions-item>
-          <el-descriptions-item v-if="currentDemand.status === 3" label="拒绝原因">
+          <el-descriptions-item v-if="['rejected', 'cancelled'].includes(currentDemand.status)" label="拒绝原因">
             {{ currentDemand.rejectReason || '无' }}
           </el-descriptions-item>
         </el-descriptions>
 
         <div class="drawer-footer">
-          <el-button-group v-if="currentDemand.status === 0">
+          <el-button-group v-if="['open', 'filled'].includes(currentDemand.status)">
             <el-button type="success" @click="handleSubmit(currentDemand)">提交审核</el-button>
             <el-button type="primary" @click="handleEdit(currentDemand)">编辑</el-button>
             <el-button type="danger" @click="handleDelete(currentDemand)">删除</el-button>
           </el-button-group>
-          <el-button-group v-if="currentDemand.status === 3">
+          <el-button-group v-if="['rejected', 'cancelled'].includes(currentDemand.status)">
             <el-button type="primary" @click="handleEdit(currentDemand)">编辑</el-button>
-            <el-button type="danger" @click="handleDelete(currentDemand)">删除</el-button>
-          </el-button-group>
-          <el-button-group v-if="currentDemand.status === 6">
             <el-button type="danger" @click="handleDelete(currentDemand)">删除</el-button>
           </el-button-group>
           <el-button @click="drawerVisible = false">关闭</el-button>
@@ -223,9 +217,6 @@
         label-width="100px"
         status-icon
       >
-        <el-form-item label="需求标题" prop="title">
-          <el-input v-model="form.title" placeholder="请输入需求标题" />
-        </el-form-item>
         <el-form-item label="所属项目" prop="projectId">
           <el-select v-model="form.projectId" placeholder="请选择项目" filterable style="width: 100%">
             <el-option 
@@ -236,8 +227,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="工种" prop="occupationId">
-          <el-select v-model="form.occupationId" placeholder="请选择工种" filterable style="width: 100%">
+        <el-form-item label="工种" prop="jobTypeId">
+          <el-select v-model="form.jobTypeId" placeholder="请选择工种" filterable style="width: 100%">
             <el-option 
               v-for="occupation in occupationOptions" 
               :key="occupation.id" 
@@ -246,8 +237,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="需求人数" prop="requiredCount">
-          <el-input-number v-model="form.requiredCount" :min="1" :precision="0" style="width: 100%" />
+        <el-form-item label="需求人数" prop="headcount">
+          <el-input-number v-model="form.headcount" :min="1" :precision="0" style="width: 100%" />
         </el-form-item>
         <el-form-item label="日薪(元)" prop="dailyWage">
           <el-input-number v-model="form.dailyWage" :min="0" :precision="0" :step="50" style="width: 100%" />
@@ -272,19 +263,8 @@
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="联系人" prop="contactPerson">
-          <el-input v-model="form.contactPerson" placeholder="请输入联系人姓名" />
-        </el-form-item>
-        <el-form-item label="联系电话" prop="contactPhone">
-          <el-input v-model="form.contactPhone" placeholder="请输入联系电话" />
-        </el-form-item>
-        <el-form-item label="需求描述" prop="description">
-          <el-input 
-            v-model="form.description" 
-            type="textarea" 
-            :rows="3" 
-            placeholder="请输入需求描述" 
-          />
+        <el-form-item label="工作时间" prop="workHours">
+          <el-input v-model="form.workHours" placeholder="请输入工作时间" />
         </el-form-item>
         <el-form-item label="岗位要求" prop="requirements">
           <el-input 
@@ -294,20 +274,18 @@
             placeholder="请输入岗位要求" 
           />
         </el-form-item>
+        <el-form-item label="提供住宿">
+          <el-switch v-model="form.accommodation" />
+        </el-form-item>
+        <el-form-item label="提供餐食">
+          <el-switch v-model="form.meals" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button 
-            v-if="!isEdit || form.status === 0" 
-            type="primary" 
-            @click="saveAsDraft" 
-            :loading="submitting.draft"
-          >
-            保存为草稿
-          </el-button>
-          <el-button type="success" @click="submitForm" :loading="submitting.submit">
-            {{ isEdit ? '保存并提交' : '提交审核' }}
+          <el-button type="primary" @click="submitForm" :loading="submitting.submit">
+            {{ isEdit ? '保存' : '创建' }}
           </el-button>
         </div>
       </template>
@@ -334,10 +312,27 @@ import {
   getCompanyLaborDemandList,
   searchLaborDemand
 } from '@/api/labor'
+import {
+  getLaborDemandById,
+  changeLaborDemandStatus,
+  removeLaborDemand,
+  createLaborDemand,
+  getLaborDemandPage,
+  getLaborDemandsByProject,
+  searchLaborDemands
+} from '@/api/laborDemand'
 import { getProjectList } from '@/api/project'
 import { getOccupationPage } from '@/api/occupation'
 import { useCompanyStore } from '@/stores/company'
-import type { LaborDemand, LaborDemandListItem, LaborDemandStatus, AddLaborDemandParams, UpdateLaborDemandParams } from '@/types/labor'
+import type { 
+  LaborDemand, 
+  LaborDemandListItem, 
+  LaborDemandStatus, 
+  AddLaborDemandParams, 
+  UpdateLaborDemandParams,
+  LaborDemandListItemNew,
+  LaborDemandPageQueryParams
+} from '@/types/labor'
 
 // 格式化货币
 const formatCurrency = (value: number) => {
@@ -348,31 +343,51 @@ const formatCurrency = (value: number) => {
 }
 
 // 格式化状态
-const formatStatus = (status: LaborDemandStatus) => {
-  const statusMap: Record<number, string> = {
-    0: '草稿',
-    1: '待审核',
-    2: '已批准',
-    3: '已拒绝',
-    4: '进行中',
-    5: '已完成',
-    6: '已取消'
+const formatStatus = (status: LaborDemandStatus | string) => {
+  if (typeof status === 'string') {
+    const statusMap: Record<string, string> = {
+      'open': '开放中',
+      'filled': '已满',
+      'cancelled': '已取消',
+      'expired': '已过期'
+    }
+    return statusMap[status] || '未知状态'
+  } else {
+    const statusMap: Record<number, string> = {
+      0: '草稿',
+      1: '待审核',
+      2: '已批准',
+      3: '已拒绝',
+      4: '进行中',
+      5: '已完成',
+      6: '已取消'
+    }
+    return statusMap[status] || '未知状态'
   }
-  return statusMap[status] || '未知状态'
 }
 
 // 获取状态对应的类型
-const getStatusType = (status: LaborDemandStatus) => {
-  const typeMap: Record<number, string> = {
-    0: 'info',
-    1: 'warning',
-    2: 'success',
-    3: 'danger',
-    4: 'primary',
-    5: 'success',
-    6: 'info'
+const getStatusType = (status: LaborDemandStatus | string) => {
+  if (typeof status === 'string') {
+    const typeMap: Record<string, string> = {
+      'open': 'success',
+      'filled': 'info',
+      'cancelled': 'danger',
+      'expired': 'warning'
+    }
+    return typeMap[status] || ''
+  } else {
+    const typeMap: Record<number, string> = {
+      0: 'info',
+      1: 'warning',
+      2: 'success',
+      3: 'danger',
+      4: 'primary',
+      5: 'success',
+      6: 'info'
+    }
+    return typeMap[status] || ''
   }
-  return typeMap[status] || ''
 }
 
 // 加载状态
@@ -393,7 +408,7 @@ const searchForm = reactive({
   keyword: '',
   projectId: undefined as number | undefined,
   occupationId: undefined as number | undefined,
-  status: undefined as LaborDemandStatus | undefined,
+  status: undefined as string | undefined,
   startDateBegin: undefined as string | undefined,
   startDateEnd: undefined as string | undefined,
   endDateBegin: undefined as string | undefined,
@@ -466,38 +481,41 @@ const fetchData = async () => {
       throw new Error('无法获取企业信息')
     }
     
-    // 如果有搜索条件，使用搜索接口
-    if (
-      searchForm.keyword || 
-      searchForm.projectId !== undefined || 
-      searchForm.occupationId !== undefined || 
-      searchForm.status !== undefined ||
-      searchForm.startDateBegin ||
-      searchForm.startDateEnd
-    ) {
-      const params = {
-        ...searchForm,
+    // 使用新API获取劳务需求列表
+    const queryParams: LaborDemandPageQueryParams = {
+      page: currentPage.value,
+      size: pageSize.value,
+      companyId: companyId
+    }
+    
+    // 添加其他筛选条件
+    if (searchForm.projectId) queryParams.projectId = searchForm.projectId
+    if (searchForm.status) queryParams.status = searchForm.status
+    if (searchForm.occupationId) queryParams.jobTypeId = searchForm.occupationId
+    
+    const res = await getLaborDemandPage(queryParams)
+    
+    if (res.code === 0 && res.data) {
+      // 转换数据格式以适应现有UI
+      tableData.value = res.data.records.map(item => ({
+        id: item.id,
+        projectId: item.projectId,
+        projectName: item.projectName,
         companyId: companyId,
-        page: currentPage.value,
-        size: pageSize.value
-      }
-      
-      const res = await searchLaborDemand(params)
-      if (res.code === 0 && res.data) {
-        tableData.value = res.data.list
-        total.value = res.data.total
-      } else {
-        throw new Error(res.message || '获取劳务需求列表失败')
-      }
+        companyName: companyStore.companyName || '',
+        title: item.projectName, // 使用项目名称作为标题
+        occupationId: item.jobTypeId,
+        occupationName: item.jobTypeName,
+        requiredCount: item.headcount,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        dailyWage: item.dailyWage,
+        status: mapStatusToLegacy(item.status),
+        createTime: item.createTime
+      }))
+      total.value = res.data.total
     } else {
-      // 否则使用企业劳务需求列表接口
-      const res = await getCompanyLaborDemandList(companyId)
-      if (res.code === 0 && res.data) {
-        tableData.value = res.data
-        total.value = res.data.length
-      } else {
-        throw new Error(res.message || '获取劳务需求列表失败')
-      }
+      throw new Error(res.message || '获取劳务需求列表失败')
     }
   } catch (error: any) {
     console.error('获取劳务需求列表失败', error)
@@ -583,47 +601,28 @@ const isEdit = ref(false)
 const formRef = ref<FormInstance>()
 
 // 表单数据
-const form = reactive<{
-  id?: number
-  title: string
-  projectId: number | undefined
-  occupationId: number | undefined
-  requiredCount: number
-  dailyWage: number
-  startDate: string
-  endDate: string
-  contactPerson: string
-  contactPhone: string
-  description: string
-  requirements: string
-  status?: LaborDemandStatus
-}>({
-  title: '',
-  projectId: undefined,
-  occupationId: undefined,
-  requiredCount: 1,
+const form = reactive({
+  projectId: undefined as number | undefined,
+  jobTypeId: undefined as number | undefined,
+  headcount: 1,
   dailyWage: 300,
   startDate: '',
   endDate: '',
-  contactPerson: '',
-  contactPhone: '',
-  description: '',
-  requirements: ''
+  workHours: '8:00-18:00',
+  requirements: '',
+  accommodation: false,
+  meals: false
 })
 
 // 表单验证规则
 const rules = {
-  title: [
-    { required: true, message: '请输入需求标题', trigger: 'blur' },
-    { max: 100, message: '长度不能超过100个字符', trigger: 'blur' }
-  ],
   projectId: [
     { required: true, message: '请选择所属项目', trigger: 'change' }
   ],
-  occupationId: [
+  jobTypeId: [
     { required: true, message: '请选择工种', trigger: 'change' }
   ],
-  requiredCount: [
+  headcount: [
     { required: true, message: '请输入需求人数', trigger: 'blur' }
   ],
   dailyWage: [
@@ -635,37 +634,24 @@ const rules = {
   endDate: [
     { required: true, message: '请选择结束日期', trigger: 'change' }
   ],
-  contactPerson: [
-    { required: true, message: '请输入联系人', trigger: 'blur' },
-    { max: 50, message: '长度不能超过50个字符', trigger: 'blur' }
-  ],
-  contactPhone: [
-    { required: true, message: '请输入联系电话', trigger: 'blur' },
-    { max: 20, message: '长度不能超过20个字符', trigger: 'blur' }
-  ],
-  description: [
-    { max: 500, message: '长度不能超过500个字符', trigger: 'blur' }
-  ],
-  requirements: [
-    { max: 500, message: '长度不能超过500个字符', trigger: 'blur' }
+  workHours: [
+    { required: true, message: '请输入工作时间', trigger: 'blur' }
   ]
 }
 
 // 添加需求
 const handleAdd = () => {
   isEdit.value = false
-  form.title = ''
   form.projectId = undefined
-  form.occupationId = undefined
-  form.requiredCount = 1
+  form.jobTypeId = undefined
+  form.headcount = 1
   form.dailyWage = 300
   form.startDate = ''
   form.endDate = ''
-  form.contactPerson = ''
-  form.contactPhone = ''
-  form.description = ''
+  form.workHours = '8:00-18:00'
   form.requirements = ''
-  form.status = undefined
+  form.accommodation = false
+  form.meals = false
   
   dialogVisible.value = true
 }
@@ -677,7 +663,7 @@ const handleEdit = async (row: LaborDemandListItem | LaborDemand) => {
   try {
     // 如果传入的是列表项，需要先获取详情
     if (!('requirements' in row)) {
-      const res = await getLaborDemandInfo(row.id)
+      const res = await getLaborDemandById(row.id)
       if (res.code === 0 && res.data) {
         setFormData(res.data)
       } else {
@@ -685,7 +671,7 @@ const handleEdit = async (row: LaborDemandListItem | LaborDemand) => {
       }
     } else {
       // 直接使用传入的详情数据
-      setFormData(row as LaborDemand)
+      setFormData(row as any)
     }
     
     dialogVisible.value = true
@@ -697,80 +683,17 @@ const handleEdit = async (row: LaborDemandListItem | LaborDemand) => {
 }
 
 // 设置表单数据
-const setFormData = (demand: LaborDemand) => {
-  form.id = demand.id
-  form.title = demand.title
+const setFormData = (demand: any) => {
   form.projectId = demand.projectId
-  form.occupationId = demand.occupationId
-  form.requiredCount = demand.requiredCount
+  form.jobTypeId = demand.jobTypeId || demand.occupationId
+  form.headcount = demand.headcount || demand.requiredCount
   form.dailyWage = demand.dailyWage
   form.startDate = demand.startDate
   form.endDate = demand.endDate
-  form.contactPerson = demand.contactPerson
-  form.contactPhone = demand.contactPhone
-  form.description = demand.description
-  form.requirements = demand.requirements
-  form.status = demand.status
-}
-
-// 保存为草稿
-const saveAsDraft = async () => {
-  if (!formRef.value) return
-  
-  try {
-    submitting.draft = true
-    
-    if (isEdit.value && form.id) {
-      // 更新需求
-      const updateParams: UpdateLaborDemandParams = {
-        id: form.id,
-        title: form.title,
-        occupationId: form.occupationId,
-        requiredCount: form.requiredCount,
-        dailyWage: form.dailyWage,
-        startDate: form.startDate,
-        endDate: form.endDate,
-        contactPerson: form.contactPerson,
-        contactPhone: form.contactPhone,
-        description: form.description,
-        requirements: form.requirements
-      }
-      
-      await updateLaborDemand(updateParams)
-      ElMessage.success('已更新劳务需求草稿')
-    } else {
-      // 添加需求
-      if (!form.projectId || !form.occupationId) {
-        ElMessage.warning('请选择项目和工种')
-        submitting.draft = false
-        return
-      }
-      
-      const addParams: AddLaborDemandParams = {
-        projectId: form.projectId,
-        title: form.title,
-        occupationId: form.occupationId,
-        requiredCount: form.requiredCount,
-        dailyWage: form.dailyWage,
-        startDate: form.startDate,
-        endDate: form.endDate,
-        contactPerson: form.contactPerson,
-        contactPhone: form.contactPhone,
-        description: form.description,
-        requirements: form.requirements
-      }
-      
-      await addLaborDemand(addParams)
-      ElMessage.success('已保存劳务需求草稿')
-    }
-    
-    dialogVisible.value = false
-    fetchData()
-  } catch (error: any) {
-    ElMessage.error(error.message || '保存草稿失败，请稍后再试')
-  } finally {
-    submitting.draft = false
-  }
+  form.workHours = demand.workHours || '8:00-18:00'
+  form.requirements = demand.requirements || ''
+  form.accommodation = demand.accommodation === undefined ? false : demand.accommodation
+  form.meals = demand.meals === undefined ? false : demand.meals
 }
 
 // 提交表单
@@ -782,58 +705,59 @@ const submitForm = async () => {
       try {
         submitting.submit = true
         
-        if (isEdit.value && form.id) {
+        if (isEdit.value && currentDemand.value?.id) {
           // 更新需求
-          const updateParams: UpdateLaborDemandParams = {
-            id: form.id,
-            title: form.title,
-            occupationId: form.occupationId,
-            requiredCount: form.requiredCount,
+          const updateParams = {
+            id: currentDemand.value.id,
+            headcount: form.headcount,
             dailyWage: form.dailyWage,
             startDate: form.startDate,
             endDate: form.endDate,
-            contactPerson: form.contactPerson,
-            contactPhone: form.contactPhone,
-            description: form.description,
-            requirements: form.requirements
+            workHours: form.workHours,
+            requirements: form.requirements,
+            accommodation: form.accommodation,
+            meals: form.meals
           }
           
-          await updateLaborDemand(updateParams)
+          // 调用新API更新劳务需求
+          const res = await fetch(`/api/labor-demands/${currentDemand.value.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateParams)
+          })
           
-          // 如果是草稿状态，提交审核
-          if (form.status === 0) {
-            await updateLaborDemandStatus({ id: form.id, status: 1 })
+          if (!res.ok) {
+            throw new Error('更新劳务需求失败')
           }
           
-          ElMessage.success('已更新并提交劳务需求')
+          ElMessage.success('已更新劳务需求')
         } else {
-          // 添加需求并提交审核
-          if (!form.projectId || !form.occupationId) {
+          // 添加需求
+          if (!form.projectId || !form.jobTypeId) {
             throw new Error('请选择项目和工种')
           }
           
-          const addParams: AddLaborDemandParams = {
+          const addParams = {
             projectId: form.projectId,
-            title: form.title,
-            occupationId: form.occupationId,
-            requiredCount: form.requiredCount,
+            jobTypeId: form.jobTypeId,
+            headcount: form.headcount,
             dailyWage: form.dailyWage,
             startDate: form.startDate,
             endDate: form.endDate,
-            contactPerson: form.contactPerson,
-            contactPhone: form.contactPhone,
-            description: form.description,
-            requirements: form.requirements
+            workHours: form.workHours,
+            requirements: form.requirements,
+            accommodation: form.accommodation,
+            meals: form.meals
           }
           
-          const res = await addLaborDemand(addParams)
+          // 调用新API创建劳务需求
+          const res = await createLaborDemand(addParams)
           
-          // 提交审核
-          if (res.code === 0 && res.data) {
-            await updateLaborDemandStatus({ id: res.data.id, status: 1 })
+          if (res.code !== 0) {
+            throw new Error(res.message || '创建劳务需求失败')
           }
           
-          ElMessage.success('已提交劳务需求')
+          ElMessage.success('已创建劳务需求')
         }
         
         dialogVisible.value = false
@@ -859,7 +783,11 @@ const handleSubmit = async (row: LaborDemandListItem | LaborDemand) => {
     }
   ).then(async () => {
     try {
-      await updateLaborDemandStatus({ id: row.id, status: 1 })
+      // 使用新API更新状态
+      await changeLaborDemandStatus({
+        id: row.id,
+        status: 'open'
+      })
       ElMessage.success('已提交审核')
       fetchData()
     } catch (error: any) {
@@ -882,7 +810,8 @@ const handleDelete = (row: LaborDemandListItem | LaborDemand) => {
     }
   ).then(async () => {
     try {
-      await deleteLaborDemand(row.id)
+      // 使用新API删除需求
+      await removeLaborDemand(row.id)
       ElMessage.success('删除成功')
       if (drawerVisible.value) {
         drawerVisible.value = false
@@ -910,6 +839,40 @@ const handleCurrentChange = (newPage: number) => {
 // 验证企业信息
 const companyStore = useCompanyStore()
 const hasCompanyInfo = computed(() => !!companyStore.companyId)
+
+// 将新的状态字符串映射到旧的数字状态
+const mapStatusToLegacy = (status: string): LaborDemandStatus => {
+  switch (status) {
+    case 'open':
+      return LaborDemandStatus.InProgress // 4
+    case 'filled':
+      return LaborDemandStatus.Completed // 5
+    case 'cancelled':
+      return LaborDemandStatus.Canceled // 6
+    case 'expired':
+      return LaborDemandStatus.Canceled // 也映射到已取消
+    default:
+      return LaborDemandStatus.Draft // 默认为草稿
+  }
+}
+
+// 将旧的数字状态映射到新的字符串状态
+const mapLegacyToNewStatus = (status: LaborDemandStatus): string => {
+  switch (status) {
+    case LaborDemandStatus.Draft:
+    case LaborDemandStatus.Pending:
+    case LaborDemandStatus.Approved:
+    case LaborDemandStatus.InProgress:
+      return 'open'
+    case LaborDemandStatus.Completed:
+      return 'filled'
+    case LaborDemandStatus.Rejected:
+    case LaborDemandStatus.Canceled:
+      return 'cancelled'
+    default:
+      return 'open'
+  }
+}
 
 // 初始化数据
 onMounted(async () => {
