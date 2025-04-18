@@ -115,7 +115,7 @@ export interface AddLaborDemandParams {
  */
 export interface UpdateLaborDemandParams {
   id: number
-  title?: string
+  title: string
   occupationId?: number
   requiredCount?: number
   startDate?: string
@@ -182,6 +182,7 @@ export interface CompanyLaborDemandListResponse {
  * 创建劳务需求参数（新API）
  */
 export interface CreateLaborDemandParams {
+  title: string
   projectId: number
   jobTypeId: number
   headcount: number
@@ -199,10 +200,13 @@ export interface CreateLaborDemandParams {
  */
 export interface LaborDemandDetail {
   id: number
+  title: string
   projectId: number
   projectName: string
+  projectAddress?: string
   jobTypeId: number
   jobTypeName: string
+  jobTypeCategory?: string
   headcount: number
   dailyWage: number
   startDate: string
@@ -214,6 +218,7 @@ export interface LaborDemandDetail {
   status: string
   createTime: string
   updateTime?: string
+  companyName?: string
 }
 
 /**
@@ -253,10 +258,13 @@ export interface LaborDemandResponse<T = any> {
  */
 export interface LaborDemandListItemNew {
   id: number
+  title: string
   projectId: number
   projectName: string
+  projectAddress?: string
   jobTypeId: number
   jobTypeName: string
+  jobTypeCategory?: string
   headcount: number
   dailyWage: number
   startDate: string
@@ -268,18 +276,24 @@ export interface LaborDemandListItemNew {
   status: string
   createTime: string
   updateTime?: string
+  companyName?: string
 }
 
 /**
  * 劳务需求分页查询参数
  */
 export interface LaborDemandPageQueryParams {
-  page?: number
-  size?: number
+  page: number
+  size: number
   projectId?: number
-  status?: string
   jobTypeId?: number
-  companyId?: number
+  status?: string
+  minDailyWage?: number
+  maxDailyWage?: number
+  startDate?: string
+  endDate?: string
+  accommodation?: boolean
+  meals?: boolean
 }
 
 /**
@@ -287,16 +301,14 @@ export interface LaborDemandPageQueryParams {
  */
 export interface LaborDemandPageResponse {
   code: number
+  message: string
   data: {
     records: LaborDemandListItemNew[]
     total: number
     size: number
     current: number
-    orders: any[]
-    searchCount: boolean
     pages: number
   }
-  message: string
 }
 
 /**
@@ -304,8 +316,8 @@ export interface LaborDemandPageResponse {
  */
 export interface LaborDemandListResponseNew {
   code: number
-  data: LaborDemandListItemNew[]
   message: string
+  data: LaborDemandListItemNew[]
 }
 
 /**
@@ -322,4 +334,46 @@ export interface LaborDemandSearchParams {
   startDateTo?: string
   page?: number
   size?: number
+}
+
+/**
+ * 更新劳务需求状态参数
+ */
+export interface LaborDemandStatusUpdateParams {
+  id: number
+  status: string
+}
+
+/**
+ * 项目劳务需求统计信息
+ */
+export interface LaborDemandStatsByProject {
+  totalDemandCount: number
+  totalHeadcount: number
+  openDemandCount: number
+  filledDemandCount: number
+  totalCost: number
+  occupationDistribution: {
+    occupationId: number
+    occupationName: string
+    count: number
+    totalWage: number
+  }[]
+}
+
+/**
+ * 公司劳务需求统计信息
+ */
+export interface LaborDemandStatsByCompany {
+  totalProjects: number
+  totalDemands: number
+  totalHeadcount: number
+  totalCost: number
+  projectDistribution: {
+    projectId: number
+    projectName: string
+    demandCount: number
+    headcount: number
+    cost: number
+  }[]
 } 

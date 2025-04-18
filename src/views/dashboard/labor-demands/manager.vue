@@ -258,6 +258,9 @@
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="需求标题" prop="title">
+          <el-input v-model="form.title" placeholder="请输入需求标题" />
+        </el-form-item>
         <el-form-item label="工种" prop="jobTypeId">
           <el-select v-model="form.jobTypeId" placeholder="请选择工种" filterable style="width: 100%">
             <el-option 
@@ -295,7 +298,7 @@
           />
         </el-form-item>
         <el-form-item label="工作时间" prop="workHours">
-          <el-input v-model="form.workHours" placeholder="请输入工作时间" />
+          <el-input v-model="form.workHours" placeholder="请输入工作时间，例如：8:00-17:00" />
         </el-form-item>
         <el-form-item label="岗位要求" prop="requirements">
           <el-input 
@@ -801,6 +804,7 @@ const formRef = ref<FormInstance>()
 // 表单数据
 const form = reactive({
   projectId: undefined as number | undefined,
+  title: '',
   jobTypeId: undefined as number | undefined,
   headcount: 1,
   dailyWage: 300,
@@ -816,6 +820,10 @@ const form = reactive({
 const rules = {
   projectId: [
     { required: true, message: '请选择所属项目', trigger: 'change' }
+  ],
+  title: [
+    { required: true, message: '请输入需求标题', trigger: 'blur' },
+    { max: 50, message: '长度不能超过50个字符', trigger: 'blur' }
   ],
   jobTypeId: [
     { required: true, message: '请选择工种', trigger: 'change' }
@@ -841,6 +849,7 @@ const rules = {
 const handleAdd = () => {
   isEdit.value = false
   form.projectId = undefined
+  form.title = ''
   form.jobTypeId = undefined
   form.headcount = 1
   form.dailyWage = 300
@@ -883,11 +892,12 @@ const handleEdit = async (row: LaborDemandListItem | LaborDemand) => {
 // 设置表单数据
 const setFormData = (demand: any) => {
   form.projectId = demand.projectId
+  form.title = demand.title || ''
   form.jobTypeId = demand.jobTypeId || demand.occupationId
   form.headcount = demand.headcount || demand.requiredCount
   form.dailyWage = demand.dailyWage
-  form.startDate = demand.startDate
-  form.endDate = demand.endDate
+  form.startDate = formatDateString(demand.startDate)
+  form.endDate = formatDateString(demand.endDate)
   form.workHours = demand.workHours || '8:00-18:00'
   form.requirements = demand.requirements || ''
   form.accommodation = demand.accommodation === undefined ? false : demand.accommodation
@@ -907,6 +917,7 @@ const submitForm = async () => {
           // 更新需求
           const updateParams = {
             id: currentDemand.value.id,
+            title: form.title,
             headcount: form.headcount,
             dailyWage: form.dailyWage,
             startDate: form.startDate,
@@ -918,14 +929,10 @@ const submitForm = async () => {
           }
           
           // 调用新API更新劳务需求
-          const res = await fetch(`/api/labor-demands/${currentDemand.value.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updateParams)
-          })
+          const res = await updateLaborDemand(updateParams)
           
-          if (!res.ok) {
-            throw new Error('更新劳务需求失败')
+          if (res.code !== 0) {
+            throw new Error(res.message || '更新劳务需求失败')
           }
           
           ElMessage.success('已更新劳务需求')
@@ -936,6 +943,7 @@ const submitForm = async () => {
           }
           
           const addParams = {
+            title: form.title,
             projectId: form.projectId,
             jobTypeId: form.jobTypeId,
             headcount: form.headcount,

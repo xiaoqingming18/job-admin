@@ -2,13 +2,15 @@ import { get, post, put, del } from '@/utils/request'
 import type { 
   CreateLaborDemandParams,
   LaborDemandDetail,
-  UpdateLaborDemandParamsNew,
-  UpdateLaborDemandStatusParamsNew,
+  UpdateLaborDemandParams,
+  LaborDemandStatusUpdateParams,
   LaborDemandResponse,
   LaborDemandPageQueryParams,
   LaborDemandPageResponse,
   LaborDemandListResponseNew,
-  LaborDemandSearchParams
+  LaborDemandSearchParams,
+  LaborDemandStatsByProject,
+  LaborDemandStatsByCompany
 } from '@/types/labor'
 
 /**
@@ -38,7 +40,7 @@ export function getLaborDemandById(id: number): Promise<LaborDemandResponse<Labo
  * @param params 更新劳务需求参数
  * @returns Promise<LaborDemandResponse<LaborDemandDetail>>
  */
-export function updateLaborDemandInfo(params: UpdateLaborDemandParamsNew): Promise<LaborDemandResponse<LaborDemandDetail>> {
+export function updateLaborDemand(params: UpdateLaborDemandParams): Promise<LaborDemandResponse<LaborDemandDetail>> {
   return put<LaborDemandResponse<LaborDemandDetail>>('/labor-demand/update', params)
 }
 
@@ -56,7 +58,7 @@ export function removeLaborDemand(id: number): Promise<LaborDemandResponse<boole
  * @param params 更新状态参数
  * @returns Promise<LaborDemandResponse<LaborDemandDetail>>
  */
-export function changeLaborDemandStatus(params: UpdateLaborDemandStatusParamsNew): Promise<LaborDemandResponse<LaborDemandDetail>> {
+export function changeLaborDemandStatus(params: LaborDemandStatusUpdateParams): Promise<LaborDemandResponse<LaborDemandDetail>> {
   return put<LaborDemandResponse<LaborDemandDetail>>('/labor-demand/status', params)
 }
 
@@ -66,7 +68,11 @@ export function changeLaborDemandStatus(params: UpdateLaborDemandStatusParamsNew
  * @returns Promise<LaborDemandPageResponse>
  */
 export function getLaborDemandPage(params: LaborDemandPageQueryParams): Promise<LaborDemandPageResponse> {
-  return post<LaborDemandPageResponse>('/labor-demand/list', params)
+  return post<LaborDemandPageResponse>('/labor-demand/list', {
+    pageNum: params.page,
+    pageSize: params.size,
+    ...params
+  })
 }
 
 /**
@@ -94,4 +100,44 @@ export function searchLaborDemands(params: LaborDemandSearchParams): Promise<Lab
  */
 export function getRecommendedLaborDemands(limit: number = 10): Promise<LaborDemandListResponseNew> {
   return get<LaborDemandListResponseNew>('/labor-demand/recommended', { limit })
+}
+
+/**
+ * 获取项目的劳务需求统计信息
+ * @param projectId 项目ID
+ * @returns Promise<LaborDemandResponse<LaborDemandStatsByProject>>
+ */
+export function getProjectLaborDemandStats(projectId: number): Promise<LaborDemandResponse<LaborDemandStatsByProject>> {
+  return get<LaborDemandResponse<LaborDemandStatsByProject>>(`/labor-demand/stats/project/${projectId}`)
+}
+
+/**
+ * 获取公司的劳务需求统计信息
+ * @param companyId 公司ID
+ * @returns Promise<LaborDemandResponse<LaborDemandStatsByCompany>>
+ */
+export function getCompanyLaborDemandStats(companyId: number): Promise<LaborDemandResponse<LaborDemandStatsByCompany>> {
+  return get<LaborDemandResponse<LaborDemandStatsByCompany>>(`/labor-demand/stats/company/${companyId}`)
+}
+
+/**
+ * 根据工种获取劳务需求
+ * @param occupationId 工种ID
+ * @param params 查询参数
+ * @returns Promise<LaborDemandPageResponse>
+ */
+export function getLaborDemandsByOccupation(
+  occupationId: number, 
+  params?: { status?: string; page?: number; size?: number }
+): Promise<LaborDemandPageResponse> {
+  return get<LaborDemandPageResponse>(`/labor-demand/by-occupation/${occupationId}`, params)
+}
+
+/**
+ * 检查是否有操作权限
+ * @param id 劳务需求ID
+ * @returns Promise<LaborDemandResponse<boolean>>
+ */
+export function checkLaborDemandPermission(id: number): Promise<LaborDemandResponse<boolean>> {
+  return get<LaborDemandResponse<boolean>>(`/labor-demand/check-permission/${id}`)
 } 

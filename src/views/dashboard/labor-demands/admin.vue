@@ -87,6 +87,7 @@
     <el-card v-loading="loading" class="table-container" shadow="hover">
       <el-table :data="tableDataNew" style="width: 100%" border stripe>
         <el-table-column type="index" width="50" />
+        <el-table-column prop="title" label="需求标题" min-width="150" show-overflow-tooltip />
         <el-table-column prop="projectName" label="所属项目" min-width="120" show-overflow-tooltip />
         <el-table-column prop="jobTypeName" label="工种" min-width="100" />
         <el-table-column prop="headcount" label="需求人数" width="100" align="center" />
@@ -300,16 +301,17 @@
     <el-dialog
       v-model="createDialogVisible"
       title="创建劳务需求"
-      width="500px"
+      width="650px"
+      :destroy-on-close="true"
     >
       <el-form
         ref="createFormRef"
         :model="createForm"
-        :rules="createFormRules"
+        :rules="createRules"
         label-width="100px"
       >
-        <el-form-item label="企业" prop="companyId">
-          <el-select v-model="createForm.companyId" placeholder="请选择企业" clearable>
+        <el-form-item label="所属企业" prop="companyId">
+          <el-select v-model="createForm.companyId" placeholder="请选择企业" filterable style="width: 100%">
             <el-option 
               v-for="company in companyOptions" 
               :key="company.id" 
@@ -318,13 +320,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="项目" prop="projectId">
-          <el-select 
-            v-model="createForm.projectId" 
-            placeholder="请选择项目" 
-            clearable
-            :disabled="!createForm.companyId"
-          >
+        <el-form-item label="所属项目" prop="projectId">
+          <el-select v-model="createForm.projectId" placeholder="请选择项目" filterable style="width: 100%">
             <el-option 
               v-for="project in projectOptions" 
               :key="project.id" 
@@ -332,10 +329,12 @@
               :value="project.id" 
             />
           </el-select>
-          <div v-if="!createForm.companyId" class="form-tip">请先选择企业</div>
+        </el-form-item>
+        <el-form-item label="需求标题" prop="title">
+          <el-input v-model="createForm.title" placeholder="请输入需求标题" />
         </el-form-item>
         <el-form-item label="工种" prop="jobTypeId">
-          <el-select v-model="createForm.jobTypeId" placeholder="请选择工种" clearable>
+          <el-select v-model="createForm.jobTypeId" placeholder="请选择工种" filterable style="width: 100%">
             <el-option 
               v-for="occupation in occupationOptions" 
               :key="occupation.id" 
@@ -345,22 +344,10 @@
           </el-select>
         </el-form-item>
         <el-form-item label="需求人数" prop="headcount">
-          <el-input 
-            v-model="createForm.headcount" 
-            type="number"
-            min="1"
-            placeholder="请输入需求人数" 
-            @input="handleNumberInput($event, 'headcount')"
-          />
+          <el-input-number v-model="createForm.headcount" :min="1" :precision="0" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="日薪" prop="dailyWage">
-          <el-input 
-            v-model="createForm.dailyWage" 
-            type="number"
-            min="0"
-            placeholder="请输入日薪" 
-            @input="handleNumberInput($event, 'dailyWage')"
-          />
+        <el-form-item label="日薪(元)" prop="dailyWage">
+          <el-input-number v-model="createForm.dailyWage" :min="0" :precision="0" :step="50" style="width: 100%" />
         </el-form-item>
         <el-form-item label="开始日期" prop="startDate">
           <el-date-picker
@@ -369,6 +356,7 @@
             placeholder="选择开始日期"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
+            style="width: 100%"
           />
         </el-form-item>
         <el-form-item label="结束日期" prop="endDate">
@@ -378,13 +366,19 @@
             placeholder="选择结束日期"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
+            style="width: 100%"
           />
         </el-form-item>
         <el-form-item label="工作时间" prop="workHours">
-          <el-input v-model="createForm.workHours" placeholder="请输入工作时间" />
+          <el-input v-model="createForm.workHours" placeholder="请输入工作时间，例如：8:00-17:00" />
         </el-form-item>
         <el-form-item label="岗位要求" prop="requirements">
-          <el-input v-model="createForm.requirements" type="textarea" placeholder="请输入岗位要求" />
+          <el-input 
+            v-model="createForm.requirements" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入岗位要求" 
+          />
         </el-form-item>
         <el-form-item label="提供住宿">
           <el-switch v-model="createForm.accommodation" />
@@ -396,9 +390,75 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="createDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitCreateForm" :loading="submitting">
-            确认创建
-          </el-button>
+          <el-button type="primary" @click="submitCreateForm" :loading="submitting.value">创建</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 更新劳务需求对话框 -->
+    <el-dialog
+      v-model="updateDialogVisible"
+      title="更新劳务需求"
+      width="650px"
+      :destroy-on-close="true"
+    >
+      <el-form
+        ref="updateFormRef"
+        :model="updateForm"
+        :rules="updateRules"
+        label-width="100px"
+      >
+        <el-form-item label="需求标题" prop="title">
+          <el-input v-model="updateForm.title" placeholder="请输入需求标题" />
+        </el-form-item>
+        <el-form-item label="需求人数" prop="headcount">
+          <el-input-number v-model="updateForm.headcount" :min="1" :precision="0" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="日薪(元)" prop="dailyWage">
+          <el-input-number v-model="updateForm.dailyWage" :min="0" :precision="0" :step="50" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="开始日期" prop="startDate">
+          <el-date-picker
+            v-model="updateForm.startDate"
+            type="date"
+            placeholder="选择开始日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="结束日期" prop="endDate">
+          <el-date-picker
+            v-model="updateForm.endDate"
+            type="date"
+            placeholder="选择结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="工作时间" prop="workHours">
+          <el-input v-model="updateForm.workHours" placeholder="请输入工作时间，例如：8:00-17:00" />
+        </el-form-item>
+        <el-form-item label="岗位要求" prop="requirements">
+          <el-input 
+            v-model="updateForm.requirements" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入岗位要求" 
+          />
+        </el-form-item>
+        <el-form-item label="提供住宿">
+          <el-switch v-model="updateForm.accommodation" />
+        </el-form-item>
+        <el-form-item label="提供餐食">
+          <el-switch v-model="updateForm.meals" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="updateDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitUpdateForm" :loading="submitting.value">更新</el-button>
         </span>
       </template>
     </el-dialog>
@@ -1100,24 +1160,24 @@ const handleViewProjectDemands = async (projectId: number) => {
 
 // 创建劳务需求对话框
 const createDialogVisible = ref(false)
-const createForm = reactive<Partial<{
-  companyId: number
-  projectId: number
-  jobTypeId: number
-  headcount: number | string
-  dailyWage: number | string
+const createForm = reactive<{
+  title: string
+  projectId: number | undefined
+  jobTypeId: number | undefined  
+  headcount: number
+  dailyWage: number
   startDate: string
   endDate: string
   workHours: string
   requirements: string
   accommodation: boolean
   meals: boolean
-}>>({
-  companyId: undefined,
+}>({
+  title: '',
   projectId: undefined,
   jobTypeId: undefined,
-  headcount: '',
-  dailyWage: '',
+  headcount: 1,
+  dailyWage: 300,
   startDate: '',
   endDate: '',
   workHours: '8:00-18:00',
@@ -1126,189 +1186,172 @@ const createForm = reactive<Partial<{
   meals: false
 })
 
-// 验证日期范围
-const validateEndDate = (rule: any, value: string, callback: Function) => {
-  if (!value) {
-    callback(new Error('请选择结束日期'))
-  } else if (createForm.startDate && new Date(value) < new Date(createForm.startDate)) {
-    callback(new Error('结束日期不能早于开始日期'))
-  } else {
-    callback()
-  }
-}
-
-// 验证需求人数
-const validateHeadcount = (rule: any, value: string | number, callback: Function) => {
-  if (value === '' || value === undefined) {
-    callback(new Error('请输入需求人数'))
-  } else {
-    const numValue = Number(value)
-    if (isNaN(numValue)) {
-      callback(new Error('请输入有效数字'))
-    } else if (numValue <= 0) {
-      callback(new Error('需求人数必须大于0'))
-    } else {
-      callback()
-    }
-  }
-}
-
-// 验证日薪
-const validateDailyWage = (rule: any, value: string | number, callback: Function) => {
-  if (value === '' || value === undefined) {
-    callback(new Error('请输入日薪'))
-  } else {
-    const numValue = Number(value)
-    if (isNaN(numValue)) {
-      callback(new Error('请输入有效数字'))
-    } else if (numValue < 0) {
-      callback(new Error('日薪不能为负数'))
-    } else {
-      callback()
-    }
-  }
-}
-
-// 表单校验规则
-const createFormRules = {
-  companyId: [{ required: true, message: '请选择企业', trigger: 'change' }],
-  projectId: [{ required: true, message: '请选择项目', trigger: 'change' }],
-  jobTypeId: [{ required: true, message: '请选择工种', trigger: 'change' }],
+// 创建需求表单验证规则
+const createRules = reactive({
+  title: [
+    { required: true, message: '请输入需求标题', trigger: 'blur' },
+    { max: 50, message: '标题不能超过50个字符', trigger: 'blur' }
+  ],
+  projectId: [
+    { required: true, message: '请选择项目', trigger: 'change' }
+  ],
+  jobTypeId: [
+    { required: true, message: '请选择工种', trigger: 'change' }
+  ],
   headcount: [
     { required: true, message: '请输入需求人数', trigger: 'blur' },
-    { validator: validateHeadcount, trigger: 'blur' }
+    { type: 'number', min: 1, message: '需求人数必须大于0', trigger: 'blur' }
   ],
   dailyWage: [
     { required: true, message: '请输入日薪', trigger: 'blur' },
-    { validator: validateDailyWage, trigger: 'blur' }
+    { type: 'number', min: 0, message: '日薪不能为负数', trigger: 'blur' }
   ],
-  startDate: [{ required: true, message: '请选择开始日期', trigger: 'change' }],
+  startDate: [
+    { required: true, message: '请选择开始日期', trigger: 'change' }
+  ],
   endDate: [
-    { required: true, message: '请选择结束日期', trigger: 'change' },
-    { validator: validateEndDate, trigger: 'change' }
+    { required: true, message: '请选择结束日期', trigger: 'change' }
   ],
-  workHours: [{ required: true, message: '请输入工作时间', trigger: 'blur' }]
-}
+  workHours: [
+    { required: true, message: '请输入工作时间', trigger: 'blur' }
+  ]
+})
 
-// 创建表单引用
-const createFormRef = ref()
-
-// 打开创建对话框
-const handleCreateDemand = () => {
-  // 重置表单
-  Object.assign(createForm, {
-    companyId: undefined,
-    projectId: undefined,
-    jobTypeId: undefined,
-    headcount: '',
-    dailyWage: '',
-    startDate: '',
-    endDate: '',
-    workHours: '8:00-18:00',
-    requirements: '',
-    accommodation: false,
-    meals: false
-  })
-  createDialogVisible.value = true
-}
-
-// 提交创建表单
+// 提交创建需求表单
 const submitCreateForm = async () => {
   if (!createFormRef.value) return
-  
+
   await createFormRef.value.validate(async (valid: boolean) => {
     if (valid) {
       try {
-        submitting.value = true
-        
-        // 转换表单数据，确保数字字段是数字类型
-        const formData = {
-          ...createForm,
-          companyId: Number(createForm.companyId),
-          projectId: Number(createForm.projectId),
-          jobTypeId: Number(createForm.jobTypeId),
-          headcount: Number(createForm.headcount),
-          dailyWage: Number(createForm.dailyWage)
+        loading.value = true
+
+        // 创建需求数据
+        const params = {
+          title: createForm.title,
+          projectId: createForm.projectId,
+          jobTypeId: createForm.jobTypeId,
+          headcount: createForm.headcount,
+          dailyWage: createForm.dailyWage,
+          startDate: createForm.startDate,
+          endDate: createForm.endDate,
+          workHours: createForm.workHours,
+          requirements: createForm.requirements,
+          accommodation: createForm.accommodation,
+          meals: createForm.meals
         }
-        
-        // 调用新API创建劳务需求
-        const res = await createLaborDemand(formData as any)
-        
+
+        const res = await createLaborDemand(params)
+
         if (res.code === 0) {
-          ElMessage.success('劳务需求创建成功')
+          ElMessage.success('创建劳务需求成功')
           createDialogVisible.value = false
-          fetchData() // 刷新列表
+          refreshData()
         } else {
           throw new Error(res.message || '创建失败')
         }
       } catch (error: any) {
-        console.error('创建劳务需求失败', error)
-        ElMessage.error(error.message || '创建失败，请稍后再试')
+        ElMessage.error(error.message || '创建劳务需求失败，请稍后再试')
       } finally {
-        submitting.value = false
+        loading.value = false
       }
-    } else {
-      ElMessage.warning('请完善表单信息')
-      return false
     }
   })
 }
 
-// 监听开始日期变化，验证结束日期
-watch(
-  () => createForm.startDate,
-  (newStartDate) => {
-    // 如果开始日期存在且晚于结束日期，重置结束日期
-    if (newStartDate && createForm.endDate && new Date(newStartDate) > new Date(createForm.endDate)) {
-      createForm.endDate = ''
-      ElMessage.warning('结束日期不能早于开始日期')
-    }
-  }
-)
+// 更新需求表单
+const updateForm = reactive<{
+  id: number | undefined
+  title: string  
+  headcount: number
+  dailyWage: number
+  startDate: string
+  endDate: string
+  workHours: string
+  requirements: string
+  accommodation: boolean
+  meals: boolean
+}>({
+  id: undefined,
+  title: '',
+  headcount: 1,
+  dailyWage: 300,
+  startDate: '',
+  endDate: '',
+  workHours: '8:00-18:00',
+  requirements: '',
+  accommodation: false,
+  meals: false
+})
 
-// 监听创建表单中的企业选择变化
-watch(
-  () => createForm.companyId,
-  (newCompanyId) => {
-    // 重置项目选择
-    createForm.projectId = undefined
-    
-    // 如果选择了企业，加载该企业的项目
-    if (newCompanyId) {
-      fetchProjectListForCompany(newCompanyId)
-    }
-  }
-)
+// 更新需求表单验证规则
+const updateRules = reactive({
+  title: [
+    { required: true, message: '请输入需求标题', trigger: 'blur' },
+    { max: 50, message: '标题不能超过50个字符', trigger: 'blur' }
+  ],
+  headcount: [
+    { required: true, message: '请输入需求人数', trigger: 'blur' },
+    { type: 'number', min: 1, message: '需求人数必须大于0', trigger: 'blur' }
+  ],
+  dailyWage: [
+    { required: true, message: '请输入日薪', trigger: 'blur' },
+    { type: 'number', min: 0, message: '日薪不能为负数', trigger: 'blur' }
+  ],
+  startDate: [
+    { required: true, message: '请选择开始日期', trigger: 'change' }
+  ],
+  endDate: [
+    { required: true, message: '请选择结束日期', trigger: 'change' }
+  ],
+  workHours: [
+    { required: true, message: '请输入工作时间', trigger: 'blur' }
+  ]
+})
 
-// 获取指定企业的项目列表
-const fetchProjectListForCompany = async (companyId: number) => {
-  try {
-    // 使用getCompanyProjectList获取指定企业的项目
-    const res = await getCompanyProjectList({
-      companyId: companyId,
-      pageNum: 1,
-      pageSize: 1000 // 获取所有项目，用于下拉选择
-    })
-    
-    // 处理API响应
-    if (Array.isArray(res.data)) {
-      projectOptions.value = res.data.map((item: any) => ({
-        id: item.id,
-        name: item.name
-      }))
-    } else if (res.data && Array.isArray(res.data.list)) {
-      projectOptions.value = res.data.list.map((item: any) => ({
-        id: item.id,
-        name: item.name
-      }))
-    } else {
-      projectOptions.value = []
+// 提交更新需求表单
+const submitUpdateForm = async () => {
+  if (!updateFormRef.value) return
+
+  await updateFormRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      try {
+        loading.value = true
+
+        if (!updateForm.id) {
+          throw new Error('需求ID不能为空')
+        }
+
+        // 更新需求数据
+        const params = {
+          id: updateForm.id,
+          title: updateForm.title,
+          headcount: updateForm.headcount,
+          dailyWage: updateForm.dailyWage,
+          startDate: updateForm.startDate,
+          endDate: updateForm.endDate,
+          workHours: updateForm.workHours,
+          requirements: updateForm.requirements,
+          accommodation: updateForm.accommodation,
+          meals: updateForm.meals
+        }
+
+        const res = await updateLaborDemand(params)
+
+        if (res.code === 0) {
+          ElMessage.success('更新劳务需求成功')
+          updateDialogVisible.value = false
+          refreshData()
+        } else {
+          throw new Error(res.message || '更新失败')
+        }
+      } catch (error: any) {
+        ElMessage.error(error.message || '更新劳务需求失败，请稍后再试')
+      } finally {
+        loading.value = false
+      }
     }
-  } catch (error) {
-    console.error('获取企业项目列表失败', error)
-    ElMessage.error('获取企业项目列表失败，请稍后再试')
-    projectOptions.value = []
-  }
+  })
 }
 
 // 处理数字输入
