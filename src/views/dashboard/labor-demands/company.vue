@@ -111,7 +111,7 @@
               提交
             </el-button>
             <el-button 
-              v-if="['open', 'filled'].includes(scope.row.status)" 
+              v-if="['open', 'filled', 'cancelled', 'expired'].includes(scope.row.status)" 
               type="primary" 
               link 
               size="small" 
@@ -120,7 +120,7 @@
               编辑
             </el-button>
             <el-button 
-              v-if="['open', 'filled'].includes(scope.row.status)" 
+              v-if="['open', 'filled', 'cancelled', 'expired'].includes(scope.row.status)" 
               type="danger" 
               link 
               size="small" 
@@ -189,12 +189,8 @@
         </el-descriptions>
 
         <div class="drawer-footer">
-          <el-button-group v-if="['open', 'filled'].includes(currentDemand.status)">
-            <el-button type="success" @click="handleSubmit(currentDemand)">提交审核</el-button>
-            <el-button type="primary" @click="handleEdit(currentDemand)">编辑</el-button>
-            <el-button type="danger" @click="handleDelete(currentDemand)">删除</el-button>
-          </el-button-group>
-          <el-button-group v-if="['rejected', 'cancelled'].includes(currentDemand.status)">
+          <el-button-group v-if="['open', 'filled', 'cancelled', 'expired'].includes(currentDemand.status)">
+            <el-button v-if="currentDemand.status === 'open'" type="success" @click="handleSubmit(currentDemand)">提交审核</el-button>
             <el-button type="primary" @click="handleEdit(currentDemand)">编辑</el-button>
             <el-button type="danger" @click="handleDelete(currentDemand)">删除</el-button>
           </el-button-group>
@@ -881,6 +877,28 @@ const mapLegacyToNewStatus = (status: LaborDemandStatus): string => {
     default:
       return 'open'
   }
+}
+
+// 格式化日期字符串
+const formatDateString = (dateStr: string): string => {
+  if (!dateStr) return ''
+  
+  // 检查是否是带T和时区的ISO格式
+  if (dateStr.includes('T')) {
+    const date = new Date(dateStr)
+    return date.toISOString().split('T')[0]
+  }
+  
+  // 检查是否包含毫秒或时区信息
+  if (dateStr.includes('.') || dateStr.includes('Z') || dateStr.includes('+')) {
+    const date = new Date(dateStr)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
+  return dateStr
 }
 
 // 初始化数据
