@@ -861,7 +861,7 @@ const companyStore = useCompanyStore()
 const hasCompanyInfo = computed(() => !!companyStore.companyId)
 
 // 将新的状态字符串映射到旧的数字状态
-const mapStatusToLegacy = (status: string): LaborDemandStatus => {
+const mapStatusToLegacy = (status: string): number => {
   switch (status) {
     case 'open':
       return LaborDemandStatusEnum.InProgress // 4
@@ -877,7 +877,7 @@ const mapStatusToLegacy = (status: string): LaborDemandStatus => {
 }
 
 // 将旧的数字状态映射到新的字符串状态
-const mapLegacyToNewStatus = (status: LaborDemandStatus): string => {
+const mapLegacyToNewStatus = (status: number): string => {
   switch (status) {
     case LaborDemandStatusEnum.Draft:
     case LaborDemandStatusEnum.Pending:
