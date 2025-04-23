@@ -74,8 +74,8 @@
         </el-table-column>
         <el-table-column label="项目状态" width="100" align="center">
           <template #default="scope">
-            <el-tag :type="getStatusType(scope.row.status)">
-              {{ formatStatus(scope.row.status) }}
+            <el-tag :type="getStatusType(calculateProjectStatus(scope.row))">
+              {{ formatStatus(calculateProjectStatus(scope.row)) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -136,8 +136,8 @@
           <el-descriptions-item label="项目类型">{{ formatProjectType(currentProject.projectType) }}</el-descriptions-item>
           <el-descriptions-item label="项目规模">{{ formatProjectScale(currentProject.projectScale) }}</el-descriptions-item>
           <el-descriptions-item label="项目状态">
-            <el-tag :type="getStatusType(currentProject.status)">
-              {{ formatStatus(currentProject.status) }}
+            <el-tag :type="getStatusType(calculateProjectStatus(currentProject))">
+              {{ formatStatus(calculateProjectStatus(currentProject)) }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="开始日期">{{ formatDate(currentProject.startDate) }}</el-descriptions-item>
@@ -299,6 +299,27 @@ const formatDate = (dateStr: string) => {
   }).format(date).replace(/\//g, '-')
 }
 
+// 根据开始日期和预计结束日期计算项目实际状态
+const calculateProjectStatus = (project: any) => {
+  const now = new Date().getTime()
+  const startDate = project.startDate ? new Date(project.startDate).getTime() : 0
+  const expectedEndDate = project.expectedEndDate ? new Date(project.expectedEndDate).getTime() : 0
+  
+  // 如果项目状态是已暂停或已取消，保持原状态
+  if (project.status === 'paused' || project.status === 'cancelled') {
+    return project.status
+  }
+  
+  // 根据日期计算实际状态
+  if (startDate > now) {
+    return 'pending' // 未开始
+  } else if (expectedEndDate < now) {
+    return 'completed' // 已结束
+  } else {
+    return 'in_progress' // 进行中
+  }
+}
+
 // 格式化项目状态
 const formatStatus = (status: string) => {
   const statusMap: Record<string, string> = {
@@ -403,10 +424,17 @@ const fetchData = async () => {
       
       const res = await getManagerProjectList(managerId)
       if (res.code === 0) {
-        projectList.value = res.data || []
-        total.value = res.data.length // 使用数组长度作为总数
+        // 处理项目状态
+        const processedProjects = (res.data || []).map(project => {
+          // 计算实际项目状态
+          const realStatus = calculateProjectStatus(project)
+          return { ...project, status: realStatus }
+        })
+        
+        projectList.value = processedProjects
+        total.value = processedProjects.length // 使用数组长度作为总数
         currentPage.value = 1 // 固定为第一页
-        pageSize.value = res.data.length // 页大小设置为数组长度
+        pageSize.value = processedProjects.length // 页大小设置为数组长度
       } else {
         throw new Error(res.message || '获取项目列表失败')
       }
@@ -418,19 +446,21 @@ const fetchData = async () => {
         pageSize: pageSize.value
       })
       if (res.code === 0) {
-        // 为项目添加企业名称
-        const companyName = companyStore.companyName || '';
-        const projectsWithCompanyName = res.data.map((project: any) => {
+        // 为项目添加企业名称并处理状态
+        const projectsWithCompanyName = (res.data || []).map((project: any) => {
+          // 计算实际项目状态
+          const realStatus = calculateProjectStatus(project)
+          
           if (!project.companyName) {
-            return { ...project, companyName }
+            return { ...project, companyName: companyStore.companyName || '', status: realStatus }
           }
-          return project
+          return { ...project, status: realStatus }
         })
         
-        projectList.value = projectsWithCompanyName || []
-        total.value = res.data.length // 由于没有分页信息，使用数组长度作为总数
+        projectList.value = projectsWithCompanyName
+        total.value = projectsWithCompanyName.length // 由于没有分页信息，使用数组长度作为总数
         currentPage.value = 1 // 固定为第一页
-        pageSize.value = res.data.length // 页大小设置为数组长度
+        pageSize.value = projectsWithCompanyName.length // 页大小设置为数组长度
       } else {
         throw new Error(res.message || '获取项目列表失败')
       }
@@ -445,20 +475,23 @@ const fetchData = async () => {
       })
       
       if (res.code === 0 && res.data) {
-        // 处理企业名称信息
-        const projectsWithCompanyName = res.data.list.map((project: any) => {
+        // 处理企业名称信息和项目状态
+        const projectsWithCompanyName = (res.data.list || []).map((project: any) => {
+          // 计算实际项目状态
+          const realStatus = calculateProjectStatus(project)
+          
           // 如果项目中已包含companyName则直接使用，否则根据companyId查找
           if (!project.companyName && project.companyId) {
             // 尝试查找企业名称
             const company = companyOptions.value.find(c => c.id === project.companyId)
             if (company) {
-              return { ...project, companyName: company.name }
+              return { ...project, companyName: company.name, status: realStatus }
             }
           }
-          return project
+          return { ...project, status: realStatus }
         })
         
-        projectList.value = projectsWithCompanyName || []
+        projectList.value = projectsWithCompanyName
         total.value = res.data.total || 0
         currentPage.value = res.data.pageNum || 1
         pageSize.value = res.data.pageSize || 10
@@ -503,7 +536,8 @@ const currentProject = ref<any>(null)
 
 // 查看项目详情
 const handleDetail = (row: any) => {
-  currentProject.value = row
+  // 确保详情页面也显示计算后的状态
+  currentProject.value = { ...row, status: calculateProjectStatus(row) }
   drawerVisible.value = true
 }
 
