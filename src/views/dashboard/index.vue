@@ -11,7 +11,9 @@ import {
   Expand,
   Fold,
   ArrowDown,
-  Tools
+  Tools,
+  Document,
+  Calendar
 } from '@element-plus/icons-vue'
 import { clearUserInfo, isAdmin } from '@/utils/auth'
 
@@ -69,6 +71,18 @@ const baseMenuItems = [
     index: '/dashboard/labor-demands'
   },
   {
+    icon: 'Document',
+    title: '求职申请管理',
+    index: '/dashboard/job-applications',
+    managerOnly: true // 标记为仅项目经理可见
+  },
+  {
+    icon: 'Calendar',
+    title: '面试管理',
+    index: '/dashboard/interviews',
+    managerOnly: true // 标记为仅项目经理可见
+  },
+  {
     icon: 'Suitcase',
     title: '职位管理',
     index: '/dashboard/jobs'
@@ -95,6 +109,10 @@ const menuItems = computed(() => {
     // 如果菜单项标记为仅企业管理员可见，则只在用户类型为company时显示
     if (item.companyAdminOnly) {
       return userType.value === 'company'
+    }
+    // 如果菜单项标记为仅项目经理可见，则只在用户类型为manager时显示
+    if (item.managerOnly) {
+      return userType.value === 'manager'
     }
     return true
   })

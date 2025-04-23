@@ -151,6 +151,36 @@ const router = createRouter({
             managerOnly: true
           }
         },
+        {
+          path: 'job-applications',
+          name: 'job-applications',
+          component: () => import('@/views/dashboard/job-applications/index.vue'),
+          meta: {
+            title: '求职申请管理',
+            requiresAuth: true,
+            managerOnly: true
+          }
+        },
+        {
+          path: 'job-applications/:id',
+          name: 'job-application-detail',
+          component: () => import('@/views/dashboard/job-applications/detail.vue'),
+          meta: {
+            title: '求职申请详情',
+            requiresAuth: true,
+            managerOnly: true
+          }
+        },
+        {
+          path: 'interviews',
+          name: 'interviews',
+          component: () => import('@/views/dashboard/interviews/index.vue'),
+          meta: {
+            title: '面试管理',
+            requiresAuth: true,
+            managerOnly: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },
