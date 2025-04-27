@@ -83,6 +83,17 @@ const baseMenuItems = [
     managerOnly: true // 标记为仅项目经理可见
   },
   {
+    icon: 'Document',
+    title: '合同模板管理',
+    index: '/dashboard/contract-templates',
+    companyAdminOnly: true // 标记为仅企业管理员可见
+  },
+  {
+    icon: 'Document',
+    title: '劳务合同管理',
+    index: '/dashboard/labor-contracts'
+  },
+  {
     icon: 'Suitcase',
     title: '职位管理',
     index: '/dashboard/jobs'

@@ -181,6 +181,34 @@ const router = createRouter({
             managerOnly: true
           }
         },
+        {
+          path: 'contract-templates',
+          name: 'contract-templates',
+          component: () => import('@/views/dashboard/contract-templates/index.vue'),
+          meta: {
+            title: '合同模板管理',
+            requiresAuth: true,
+            companyAdminOnly: true
+          }
+        },
+        {
+          path: 'labor-contracts',
+          name: 'labor-contracts',
+          component: () => import('@/views/dashboard/labor-contracts/index.vue'),
+          meta: {
+            title: '劳务合同管理',
+            requiresAuth: true
+          }
+        },
+        {
+          path: 'labor-contracts/:id',
+          name: 'labor-contract-detail',
+          component: () => import('@/views/dashboard/labor-contracts/detail.vue'),
+          meta: {
+            title: '劳务合同详情',
+            requiresAuth: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },
