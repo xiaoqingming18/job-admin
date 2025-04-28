@@ -84,14 +84,24 @@ const baseMenuItems = [
   },
   {
     icon: 'Document',
-    title: '合同模板管理',
-    index: '/dashboard/contract-templates',
-    companyAdminOnly: true // 标记为仅企业管理员可见
-  },
-  {
-    icon: 'Document',
-    title: '劳务合同管理',
-    index: '/dashboard/labor-contracts'
+    title: '合同管理',
+    index: '/dashboard/contracts',
+    children: [
+      {
+        title: '合同模板管理',
+        index: '/dashboard/contract-templates',
+        companyAdminOnly: true // 标记为仅企业管理员可见
+      },
+      {
+        title: '劳务合同管理',
+        index: '/dashboard/labor-contracts'
+      },
+      {
+        title: '签约与续签',
+        index: '/dashboard/contract-signing',
+        managerOnly: true // 标记为仅项目经理可见
+      }
+    ]
   },
   {
     icon: 'Suitcase',
@@ -110,24 +120,33 @@ const baseMenuItems = [
   }
 ]
 
+// 检查菜单项是否有权限显示
+const checkMenuItemPermission = (item: any) => {
+  // 如果菜单项标记为仅管理员可见，则只在用户类型为admin时显示
+  if (item.adminOnly) {
+    return isAdmin()
+  }
+  // 如果菜单项标记为仅企业管理员可见，则只在用户类型为company时显示
+  if (item.companyAdminOnly) {
+    return userType.value === 'company'
+  }
+  // 如果菜单项标记为仅项目经理可见，则只在用户类型为manager时显示
+  if (item.managerOnly) {
+    return userType.value === 'manager'
+  }
+  return true
+}
+
 // 根据用户类型过滤菜单项
 const menuItems = computed(() => {
-  return baseMenuItems.filter(item => {
-    // 如果菜单项标记为仅管理员可见，则只在用户类型为admin时显示
-    if (item.adminOnly) {
-      return isAdmin()
-    }
-    // 如果菜单项标记为仅企业管理员可见，则只在用户类型为company时显示
-    if (item.companyAdminOnly) {
-      return userType.value === 'company'
-    }
-    // 如果菜单项标记为仅项目经理可见，则只在用户类型为manager时显示
-    if (item.managerOnly) {
-      return userType.value === 'manager'
-    }
-    return true
-  })
+  return baseMenuItems.filter(item => checkMenuItemPermission(item))
 })
+
+// 获取某个父菜单项下可见的子菜单项
+const getVisibleChildren = (item: any) => {
+  if (!item.children) return []
+  return item.children.filter(child => checkMenuItemPermission(child))
+}
 </script>
 
 <template>
@@ -146,10 +165,28 @@ const menuItems = computed(() => {
         :unique-opened="true"
         :router="true"
       >
-        <el-menu-item v-for="item in menuItems" :key="item.index" :index="item.index">
-          <el-icon><component :is="item.icon" /></el-icon>
-          <template #title>{{ item.title }}</template>
-        </el-menu-item>
+        <template v-for="item in menuItems" :key="item.index">
+          <!-- 有子菜单的菜单项 -->
+          <el-sub-menu v-if="item.children" :index="item.index">
+            <template #title>
+              <el-icon><component :is="item.icon" /></el-icon>
+              <span>{{ item.title }}</span>
+            </template>
+            <el-menu-item 
+              v-for="child in getVisibleChildren(item)" 
+              :key="child.index" 
+              :index="child.index"
+            >
+              {{ child.title }}
+            </el-menu-item>
+          </el-sub-menu>
+          
+          <!-- 没有子菜单的菜单项 -->
+          <el-menu-item v-else :index="item.index">
+            <el-icon><component :is="item.icon" /></el-icon>
+            <template #title>{{ item.title }}</template>
+          </el-menu-item>
+        </template>
       </el-menu>
     </div>
     

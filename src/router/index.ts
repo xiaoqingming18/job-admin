@@ -209,6 +209,16 @@ const router = createRouter({
             requiresAuth: true
           }
         },
+        {
+          path: 'contract-signing',
+          name: 'contract-signing',
+          component: () => import('@/views/dashboard/contract-signing/index.vue'),
+          meta: {
+            title: '签约与续签',
+            requiresAuth: true,
+            managerOnly: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },

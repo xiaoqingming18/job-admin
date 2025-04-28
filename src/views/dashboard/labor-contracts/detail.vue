@@ -52,10 +52,18 @@ const goBack = () => {
 
 // 打开更新状态对话框
 const handleUpdateStatus = () => {
-  // 只有活动状态的合同可以更新
-  if (contractDetail.value?.status !== 'active') {
-    ElMessage.warning('只有生效中的合同可以更新状态')
+  // 待签和活动状态的合同可以更新
+  if (contractDetail.value?.status !== 'active' && contractDetail.value?.status !== 'pending') {
+    ElMessage.warning('只有待签或生效中的合同可以更新状态')
     return
+  }
+  
+  // 根据当前状态设置默认值
+  if (contractDetail.value?.status === 'pending') {
+    statusForm.value.status = 'active'
+    statusForm.value.terminationReason = ''
+  } else if (contractDetail.value?.status === 'active') {
+    statusForm.value.status = 'terminated'
   }
   
   statusDialogVisible.value = true
@@ -93,6 +101,8 @@ const submitStatusUpdate = async () => {
 // 获取状态标签类型
 const getStatusTagType = (status: string) => {
   switch (status) {
+    case 'pending':
+      return 'info'
     case 'active':
       return 'success'
     case 'terminated':
@@ -107,6 +117,8 @@ const getStatusTagType = (status: string) => {
 // 获取状态显示文本
 const getStatusText = (status: string) => {
   switch (status) {
+    case 'pending':
+      return '待签'
     case 'active':
       return '生效中'
     case 'terminated':
@@ -138,7 +150,7 @@ onMounted(() => {
               type="primary" 
               @click="handleUpdateStatus"
               :icon="Edit"
-              :disabled="contractDetail?.status !== 'active'"
+              :disabled="contractDetail?.status !== 'active' && contractDetail?.status !== 'pending'"
             >
               更新状态
             </el-button>
@@ -191,8 +203,9 @@ onMounted(() => {
       >
         <el-form-item label="合同状态" prop="status">
           <el-radio-group v-model="statusForm.status">
-            <el-radio label="terminated">终止合同</el-radio>
-            <el-radio label="expired">合同过期</el-radio>
+            <el-radio v-if="contractDetail?.status === 'pending'" label="active">激活合同</el-radio>
+            <el-radio v-if="contractDetail?.status === 'active'" label="terminated">终止合同</el-radio>
+            <el-radio v-if="contractDetail?.status === 'active'" label="expired">合同过期</el-radio>
           </el-radio-group>
         </el-form-item>
         

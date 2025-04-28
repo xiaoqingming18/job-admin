@@ -15,7 +15,7 @@ const router = useRouter()
 // 合同列表状态
 const loading = ref(false)
 const contractList = ref<LaborContract[]>([])
-const statusFilter = ref<'active' | 'terminated' | 'expired' | ''>('')
+const statusFilter = ref<'active' | 'terminated' | 'expired' | 'pending' | ''>('')
 const projectIdFilter = ref<number | ''>('')
 
 // 分页状态
@@ -216,6 +216,8 @@ const resetGenerateForm = () => {
 // 根据状态获取标签类型
 const getStatusTagType = (status: string) => {
   switch (status) {
+    case 'pending':
+      return 'info'
     case 'active':
       return 'success'
     case 'terminated':
@@ -230,6 +232,8 @@ const getStatusTagType = (status: string) => {
 // 获取状态显示文本
 const getStatusText = (status: string) => {
   switch (status) {
+    case 'pending':
+      return '待签'
     case 'active':
       return '生效中'
     case 'terminated':
@@ -261,6 +265,7 @@ onMounted(() => {
               clearable 
               @change="fetchContractList"
             >
+              <el-option label="待签" value="pending" />
               <el-option label="生效中" value="active" />
               <el-option label="已终止" value="terminated" />
               <el-option label="已过期" value="expired" />

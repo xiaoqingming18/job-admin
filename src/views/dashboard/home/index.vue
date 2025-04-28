@@ -159,27 +159,29 @@ const todos = ref([])
 const loadDashboardData = async () => {
   isLoading.value = true
   try {
-    const res = await getDashboardDataByRole(userType.value)
-    if (res && res.data) {
-      overviewData.value = res.data
-      
-      // 设置用户信息
-      userInfo.value = {
-        name: res.data.userName || '用户',
-        role: userType.value
-      }
-      
-      // 设置最新职位
-      if (res.data.latestJobs) {
-        latestJobs.value = res.data.latestJobs
-      }
-    }
+    // 注释掉调用后端API的代码
+    // const res = await getDashboardDataByRole(userType.value)
+    // if (res && res.data) {
+    //   overviewData.value = res.data
+    //   
+    //   // 设置用户信息
+    //   userInfo.value = {
+    //     name: res.data.userName || '用户',
+    //     role: userType.value
+    //   }
+    //   
+    //   // 设置最新职位
+    //   if (res.data.latestJobs) {
+    //     latestJobs.value = res.data.latestJobs
+    //   }
+    // }
     
-    // 直接使用模拟待办事项
+    // 直接使用模拟数据
+    mockDashboardData()
     mockTodoData()
   } catch (error) {
     console.error('获取看板数据失败', error)
-    ElMessage.error('获取看板数据失败，请稍后再试')
+    // ElMessage.error('获取看板数据失败，请稍后再试')
     
     // 模拟数据用于开发测试
     mockDashboardData()

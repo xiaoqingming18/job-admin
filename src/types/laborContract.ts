@@ -12,7 +12,7 @@ export interface LaborContract {
   projectName: string
   startDate: string
   endDate: string
-  status: 'active' | 'terminated' | 'expired'
+  status: 'pending' | 'active' | 'terminated' | 'expired' | 'review'
 }
 
 /**
@@ -24,6 +24,10 @@ export interface LaborContractDetail extends LaborContract {
   renewalCount: number
   createTime: string
   updateTime: string
+  submitTime?: string
+  newStartDate?: string
+  newEndDate?: string
+  remarks?: string
 }
 
 /**
@@ -42,6 +46,39 @@ export interface GenerateLaborContractRequest {
  * 更新劳务合同状态请求参数
  */
 export interface UpdateLaborContractStatusRequest {
-  status: 'active' | 'terminated' | 'expired'
+  status: 'pending' | 'active' | 'terminated' | 'expired'
   terminationReason?: string
+}
+
+/**
+ * 提交劳务合同签订响应
+ */
+export interface ContractSubmitResponse {
+  id: number
+  contractCode: string
+  status: string
+  submitTime: string
+}
+
+/**
+ * 合同续约请求参数
+ */
+export interface ContractRenewalRequest {
+  newStartDate: string
+  newEndDate: string
+  remarks: string
+}
+
+/**
+ * 合同续约响应
+ */
+export interface ContractRenewalResponse {
+  id: number
+  contractCode: string
+  status: string
+  renewalCount: number
+  newStartDate: string
+  newEndDate: string
+  submitTime: string
+  remarks: string
 } 

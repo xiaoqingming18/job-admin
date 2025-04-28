@@ -9,7 +9,18 @@ import { get } from '@/utils/request'
  * @returns Promise
  */
 export const getCompanyAdminDashboardData = () => {
-  return get('/dashboard/company-overview')
+  // 返回模拟数据而不是调用API
+  return Promise.resolve({
+    code: 0,
+    data: {
+      totalProjects: 48,
+      totalUsers: 21,
+      totalJobs: 64,
+      totalApplications: 12
+    }
+  })
+  // 后端API实现后取消注释以下代码
+  // return get('/dashboard/company-overview')
 }
 
 /**
@@ -17,7 +28,18 @@ export const getCompanyAdminDashboardData = () => {
  * @returns Promise
  */
 export const getProjectManagerDashboardData = () => {
-  return get('/dashboard/project-manager-overview')
+  // 返回模拟数据而不是调用API
+  return Promise.resolve({
+    code: 0,
+    data: {
+      totalProjects: 8,
+      totalWorkers: 56,
+      totalJobs: 15,
+      todayApplications: 5
+    }
+  })
+  // 后端API实现后取消注释以下代码
+  // return get('/dashboard/project-manager-overview')
 }
 
 /**

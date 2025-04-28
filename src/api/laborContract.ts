@@ -3,7 +3,10 @@ import type {
   LaborContract, 
   LaborContractDetail,
   GenerateLaborContractRequest,
-  UpdateLaborContractStatusRequest
+  UpdateLaborContractStatusRequest,
+  ContractSubmitResponse,
+  ContractRenewalRequest,
+  ContractRenewalResponse
 } from '@/types/laborContract'
 
 /**
@@ -25,7 +28,7 @@ export const generateLaborContract = (data: GenerateLaborContractRequest) => {
 export const getLaborContracts = (params?: {
   companyId?: number
   projectId?: number
-  status?: 'active' | 'terminated' | 'expired'
+  status?: 'active' | 'terminated' | 'expired' | 'pending' | 'review'
 }) => {
   return get<LaborContract[]>('/labor-contracts', params)
 }
@@ -51,4 +54,21 @@ export const updateLaborContractStatus = (id: number, data: UpdateLaborContractS
     terminationReason: string | null
     updateTime: string
   }>(`/labor-contracts/${id}/status`, data)
+}
+
+/**
+ * 提交合同签订
+ * @param id 合同ID
+ */
+export const submitContractSigning = (id: number) => {
+  return put<ContractSubmitResponse>(`/labor-contracts/${id}/submit`)
+}
+
+/**
+ * 提交合同续约
+ * @param id 合同ID
+ * @param data 续约参数
+ */
+export const submitContractRenewal = (id: number, data: ContractRenewalRequest) => {
+  return put<ContractRenewalResponse>(`/labor-contracts/${id}/renew/submit`, data)
 } 
