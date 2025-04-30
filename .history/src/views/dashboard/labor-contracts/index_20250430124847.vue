@@ -525,45 +525,23 @@ const submitApprove = async () => {
     <el-dialog
       v-model="approveDialogVisible"
       title="审核劳务合同"
-      width="40%"
+      width="30%"
       @close="handleCloseApproveDialog"
     >
-      <div v-if="currentContract" class="contract-info">
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="合同编号">{{ currentContract.contractCode }}</el-descriptions-item>
-          <el-descriptions-item label="劳工姓名">{{ currentContract.jobSeekerName }}</el-descriptions-item>
-          <el-descriptions-item label="项目名称">{{ currentContract.projectName }}</el-descriptions-item>
-          <el-descriptions-item label="合同期限">{{ currentContract.startDate }} 至 {{ currentContract.endDate }}</el-descriptions-item>
-        </el-descriptions>
-      </div>
-      
       <el-form 
         ref="approveFormRef"
         :model="approveForm" 
         :rules="approveFormRules"
         label-width="100px"
-        style="margin-top: 20px;"
       >
-        <el-form-item label="审核结果" prop="approved">
-          <el-radio-group v-model="approveForm.approved">
-            <el-radio :label="true">通过</el-radio>
-            <el-radio :label="false">拒绝</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        
         <el-form-item label="审核意见" prop="remarks">
-          <el-input 
-            type="textarea" 
-            v-model="approveForm.remarks" 
-            :rows="4"
-            :placeholder="approveForm.approved ? '请输入审核通过意见' : '请输入拒绝原因'"
-          />
+          <el-input type="textarea" v-model="approveForm.remarks" placeholder="请输入审核意见" />
         </el-form-item>
       </el-form>
       
       <template #footer>
         <el-button @click="approveDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitApprove">{{ approveForm.approved ? '确认通过' : '确认拒绝' }}</el-button>
+        <el-button type="primary" @click="submitApprove">确认</el-button>
       </template>
     </el-dialog>
   </div>

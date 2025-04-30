@@ -20,13 +20,6 @@ const statusForm = ref({
   status: 'terminated' as 'active' | 'terminated' | 'expired',
   terminationReason: ''
 })
-const statusFormRules = {
-  terminationReason: [
-    { required: true, message: '请输入终止原因', trigger: 'blur' },
-    { min: 2, max: 200, message: '终止原因长度应在 2 到 200 个字符之间', trigger: 'blur' }
-  ]
-}
-const statusFormRef = ref()
 
 // 审核对话框状态
 const approveDialogVisible = ref(false)
@@ -312,8 +305,8 @@ onMounted(() => {
       >
         <el-form-item label="审核结果" prop="approved">
           <el-radio-group v-model="approveForm.approved">
-            <el-radio :label="true">通过</el-radio>
-            <el-radio :label="false">拒绝</el-radio>
+            <el-radio label="true">通过</el-radio>
+            <el-radio label="false">拒绝</el-radio>
           </el-radio-group>
         </el-form-item>
         

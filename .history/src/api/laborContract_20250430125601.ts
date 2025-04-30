@@ -1,4 +1,4 @@
-import { get, post, put } from '@/utils/request'
+import { http } from '@/utils/request'
 import type { ApiResponse } from '@/types/common'
 import type { LaborContract, LaborContractDetail, ContractRenewalRequest } from '@/types/laborContract'
 
@@ -72,11 +72,15 @@ export const submitContractRenewal = (id: number, data: ContractRenewalRequest) 
  * @param data 审核信息
  */
 export const approveLaborContract = (id: number, data: { approved: boolean; remarks: string }) => {
-  return put<{
+  return http.request<ApiResponse<{
     id: number
     contractCode: string
     status: string
     approveTime: string
     remarks: string
-  }>(`/labor-contracts/${id}/approve`, data)
+  }>>({
+    url: `/labor-contracts/${id}/approve`,
+    method: 'PUT',
+    data
+  })
 }

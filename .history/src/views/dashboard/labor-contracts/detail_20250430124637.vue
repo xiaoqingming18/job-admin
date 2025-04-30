@@ -312,8 +312,8 @@ onMounted(() => {
       >
         <el-form-item label="审核结果" prop="approved">
           <el-radio-group v-model="approveForm.approved">
-            <el-radio :label="true">通过</el-radio>
-            <el-radio :label="false">拒绝</el-radio>
+            <el-radio label="true">通过</el-radio>
+            <el-radio label="false">拒绝</el-radio>
           </el-radio-group>
         </el-form-item>
         
