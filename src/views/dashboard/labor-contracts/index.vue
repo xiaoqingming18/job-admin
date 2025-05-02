@@ -9,6 +9,7 @@ import type { LaborContract } from '@/types/laborContract'
 import type { ContractTemplate } from '@/types/contractTemplate'
 import type { Project } from '@/types/project'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { isCompanyAdmin } from '@/utils/auth'
 
 const router = useRouter()
 
@@ -283,6 +284,12 @@ const handleCloseApproveDialog = () => {
 
 // 打开审核对话框
 const handleOpenApproveDialog = (contract: LaborContract) => {
+  // 检查是否为企业管理员
+  if (!isCompanyAdmin()) {
+    ElMessage.warning('只有企业管理员才能进行审核操作')
+    return
+  }
+  
   if (contract.status !== 'review') {
     ElMessage.warning('只有待审核状态的合同可以进行审核')
     return
@@ -381,9 +388,9 @@ const submitApprove = async () => {
         </el-table-column>
         <el-table-column label="操作" width="220">
           <template #default="{ row }">
-            <!-- 添加审核按钮，只有待审核状态的合同才显示 -->
+            <!-- 添加审核按钮，只有待审核状态的合同且当前用户是企业管理员才显示 -->
             <el-button 
-              v-if="row.status === 'review'"
+              v-if="row.status === 'review' && isCompanyAdmin()"
               type="success" 
               size="small" 
               @click="handleOpenApproveDialog(row)"

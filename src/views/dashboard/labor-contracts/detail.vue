@@ -5,6 +5,7 @@ import { ArrowLeft, Edit, Check } from '@element-plus/icons-vue'
 import { getLaborContractDetail, updateLaborContractStatus, approveLaborContract } from '@/api/laborContract'
 import type { LaborContractDetail } from '@/types/laborContract'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { isCompanyAdmin } from '@/utils/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -113,6 +114,12 @@ const submitStatusUpdate = async () => {
 
 // 打开审核对话框
 const handleApprove = () => {
+  // 检查是否为企业管理员
+  if (!isCompanyAdmin()) {
+    ElMessage.warning('只有企业管理员才能进行审核操作')
+    return
+  }
+  
   // 只有待审核状态的合同可以进行审核
   if (contractDetail.value?.status !== 'review') {
     ElMessage.warning('只有待审核状态的合同可以进行审核')
@@ -204,9 +211,9 @@ onMounted(() => {
             <h3 class="header-title">劳务合同详情</h3>
           </div>
           <div class="header-right">
-            <!-- 添加审核按钮，只有待审核状态的合同才显示 -->
+            <!-- 添加审核按钮，只有待审核状态的合同且当前用户是企业管理员才显示 -->
             <el-button 
-              v-if="contractDetail?.status === 'review'" 
+              v-if="contractDetail?.status === 'review' && isCompanyAdmin()" 
               type="success" 
               @click="handleApprove"
               :icon="Check"
