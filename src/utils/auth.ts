@@ -1,5 +1,6 @@
 import { ElMessage } from 'element-plus'
 import { useCompanyStore } from '@/stores/company'
+import { disconnectSocket } from './socket'
 
 /**
  * 检查用户是否为系统管理员
@@ -63,6 +64,9 @@ export const checkPermission = (requireAdmin = false, showMessage = true): boole
  * 清除用户信息
  */
 export const clearUserInfo = (): void => {
+  // 断开 WebSocket 连接
+  disconnectSocket()
+  
   // 清除本地存储的用户信息
   localStorage.removeItem('token')
   localStorage.removeItem('userType')

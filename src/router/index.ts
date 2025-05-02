@@ -219,6 +219,15 @@ const router = createRouter({
             managerOnly: true
           }
         },
+        {
+          path: 'chat',
+          name: 'chat',
+          component: () => import('@/views/dashboard/chat/index.vue'),
+          meta: {
+            title: '即时通讯',
+            requiresAuth: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },

@@ -55,6 +55,7 @@ import { ElMessage } from 'element-plus'
 import { adminLogin, companyAdminLogin, projectManagerLogin } from '@/api/user'
 import { useCompanyStore } from '@/stores/company'
 import { isCompanyAdmin, isProjectManager } from '@/utils/auth'
+import { initSocket } from '@/utils/socket'
 
 /**
  * 从JWT令牌中解析用户ID
@@ -155,6 +156,9 @@ const handleLogin = async () => {
             localStorage.setItem('userId', userId.toString());
           }
         }
+
+        // 初始化 WebSocket 连接
+        initSocket(token);
 
         // 如果是企业管理员或项目经理，获取企业信息
         if (userType === 'company' || userType === 'manager') {

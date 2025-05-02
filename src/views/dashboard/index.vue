@@ -13,7 +13,8 @@ import {
   ArrowDown,
   Tools,
   Document,
-  Calendar
+  Calendar,
+  ChatDotRound
 } from '@element-plus/icons-vue'
 import { clearUserInfo, isAdmin } from '@/utils/auth'
 
@@ -80,6 +81,12 @@ const baseMenuItems = [
     icon: 'Calendar',
     title: '面试管理',
     index: '/dashboard/interviews',
+    managerOnly: true // 标记为仅项目经理可见
+  },
+  {
+    icon: 'ChatDotRound',
+    title: '即时通讯',
+    index: '/dashboard/chat',
     managerOnly: true // 标记为仅项目经理可见
   },
   {

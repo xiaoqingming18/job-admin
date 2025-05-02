@@ -4,6 +4,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import elementPlugin from './plugins/element'
+import socketPlugin from './plugins/socket'
 
 // Import Element Plus styles
 import 'element-plus/es/components/message/style/css'
@@ -15,5 +16,6 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(elementPlugin)
+app.use(socketPlugin)
 
 app.mount('#app')

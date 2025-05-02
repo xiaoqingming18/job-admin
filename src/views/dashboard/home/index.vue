@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   User,
   Briefcase,
   Office,
   Document,
-  Bell
+  Bell,
+  ChatDotRound
 } from '@element-plus/icons-vue'
 import { getDashboardDataByRole } from '@/api/dashboard'
 import { isAdmin, isCompanyAdmin, isProjectManager, getUserType } from '@/utils/auth'
+import { getSocket } from '@/utils/socket'
+
+const router = useRouter()
 
 const overviewData = ref({
   totalCompanies: 0,
@@ -154,6 +159,14 @@ const chartTimeRange = ref('month')
 
 // 待办事项
 const todos = ref([])
+
+// 未读消息数
+const unreadCount = ref(3)
+
+// 进入聊天页面
+const goToChat = () => {
+  router.push('/dashboard/chat')
+}
 
 // 加载看板数据
 const loadDashboardData = async () => {
@@ -311,6 +324,27 @@ const mockTodoData = () => {
 
 onMounted(() => {
   loadDashboardData()
+  
+  // 如果是项目经理，监听新消息
+  if (isProjectManagerUser.value) {
+    const socket = getSocket()
+    if (socket) {
+      // 监听新消息，可以更新未读数
+      socket.on('receive_message', () => {
+        unreadCount.value += 1
+      })
+    }
+  }
+})
+
+// 在组件销毁前移除监听器
+onBeforeUnmount(() => {
+  if (isProjectManagerUser.value) {
+    const socket = getSocket()
+    if (socket) {
+      socket.off('receive_message')
+    }
+  }
 })
 </script>
 
@@ -324,6 +358,25 @@ onMounted(() => {
         <p class="subtitle" v-else-if="isCompanyAdminUser">欢迎使用建筑行业劳务中介管理系统，您可以管理贵公司的项目和人员</p>
         <p class="subtitle" v-else-if="isProjectManagerUser">欢迎使用建筑行业劳务中介管理系统，您可以管理您负责的项目和人员</p>
       </div>
+
+      <!-- 即时通讯入口 - 仅项目经理可见 -->
+      <div class="chat-entrance" v-if="isProjectManagerUser">
+        <el-card class="chat-card">
+          <div class="chat-card-content">
+            <div class="chat-icon">
+              <el-badge :value="unreadCount || null" :hidden="!unreadCount">
+                <el-icon :size="40"><ChatDotRound /></el-icon>
+              </el-badge>
+            </div>
+            <div class="chat-info">
+              <h3>在线沟通</h3>
+              <p>与求职者实时交流，快速响应申请</p>
+            </div>
+            <el-button type="primary" @click="goToChat">进入聊天</el-button>
+          </div>
+        </el-card>
+      </div>
+      
       <div class="quick-stats">
         <el-row :gutter="24">
           <el-col :span="6" v-for="stat in quickStats" :key="stat.title">
@@ -617,5 +670,50 @@ onMounted(() => {
   border-radius: 8px;
   border: none;
   box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+}
+
+/* 聊天入口样式 */
+.chat-entrance {
+  margin-bottom: 24px;
+}
+
+.chat-card {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e1f0fe 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+}
+
+.chat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.chat-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.chat-icon {
+  color: #409eff;
+  margin-right: 20px;
+}
+
+.chat-info {
+  flex: 1;
+}
+
+.chat-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #303133;
+}
+
+.chat-info p {
+  margin: 0;
+  color: #606266;
+  font-size: 14px;
 }
 </style>

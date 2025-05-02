@@ -9,6 +9,13 @@
           </div>
           <div class="action-container">
             <el-button 
+              type="info" 
+              @click="startChat"
+              icon="ChatDotRound"
+            >
+              在线沟通
+            </el-button>
+            <el-button 
               v-if="canArrangeInterview" 
               type="success" 
               @click="showArrangeInterviewDialog"
@@ -342,10 +349,12 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, ChatDotRound } from '@element-plus/icons-vue'
 import { 
   jobApplicationApi
 } from '@/api/jobApplication'
+import { createSingleConversation } from '@/api/im'
+import { getUserId } from '@/utils/auth'
 import type { JobApplicationDetail, Interview, InterviewReview } from '@/types/jobApplication'
 import { 
   ApplicationStatus, 
@@ -940,6 +949,46 @@ const submitReview = async () => {
       submitting.value = false
     }
   })
+}
+
+// 发起聊天
+const startChat = async () => {
+  if (!applicationDetail.value || !applicationDetail.value.jobSeekerName) {
+    ElMessage.warning('无法获取求职者信息')
+    return
+  }
+  
+  try {
+    // 获取当前用户ID
+    const currentUserId = getUserId()
+    if (!currentUserId) {
+      ElMessage.error('无法获取当前用户ID')
+      return
+    }
+    
+    // 获取求职者ID
+    const jobSeekerId = applicationDetail.value.jobSeekerId
+    
+    // 创建或获取会话
+    const response = await createSingleConversation(currentUserId, jobSeekerId)
+    
+    if (response.code === 0 && response.data) {
+      // 导航到聊天页面，携带求职者信息
+      router.push({
+        path: '/dashboard/chat',
+        query: { 
+          applicantId: jobSeekerId,
+          name: applicationDetail.value.jobSeekerName,
+          position: applicationDetail.value.demandTitle
+        }
+      })
+    } else {
+      ElMessage.error(response.message || '创建会话失败')
+    }
+  } catch (error) {
+    console.error('创建会话失败:', error)
+    ElMessage.error('创建会话失败，请稍后再试')
+  }
 }
 
 // 初始化

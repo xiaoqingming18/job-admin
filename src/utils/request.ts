@@ -2,6 +2,7 @@ import axios from 'axios'
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import message from './message'
 import router from '@/router'
+import { disconnectSocket } from './socket'
 
 // 错误码映射表
 const ERROR_CODE_MAP: Record<number, string> = {
@@ -60,6 +61,8 @@ service.interceptors.response.use(
       if (data.code === 40005 || data.code === 40006) {
         // Token 错误或已过期，清除本地存储的用户信息并跳转到登录页
         localStorage.removeItem('token')
+        // 断开 WebSocket 连接
+        disconnectSocket()
         router.push('/login')
         message.error('登录已过期，请重新登录')
       } else {
@@ -79,6 +82,8 @@ service.interceptors.response.use(
           errorMessage = '未授权，请登录'
           // 清除用户信息并跳转到登录页
           localStorage.removeItem('token')
+          // 断开 WebSocket 连接
+          disconnectSocket()
           router.push('/login')
           break
         case 403:
