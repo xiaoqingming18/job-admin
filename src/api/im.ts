@@ -26,4 +26,15 @@ export const getConversationDetail = (conversationId: number) => {
  */
 export const createSingleConversation = (userIdA: number, userIdB: number) => {
   return post('/api/im/conversations/single', { userIdA, userIdB })
+}
+
+/**
+ * 发送文本消息
+ * @param conversationId 会话ID
+ * @param senderId 发送者ID
+ * @param content 消息内容
+ * @returns 发送的消息信息
+ */
+export const sendTextMessage = (conversationId: number, senderId: number, content: string) => {
+  return post('/api/im/messages/text', { conversationId, senderId, content })
 } 

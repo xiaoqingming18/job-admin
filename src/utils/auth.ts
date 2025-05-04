@@ -75,4 +75,6 @@ export const clearUserInfo = (): void => {
   // 清除企业信息
   const companyStore = useCompanyStore()
   companyStore.clearCompanyInfo()
+  
+  // 注意：Socket状态已在disconnectSocket()中重置
 } 

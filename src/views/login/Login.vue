@@ -157,7 +157,8 @@ const handleLogin = async () => {
           }
         }
 
-        // 初始化 WebSocket 连接
+        // 在登录成功后初始化 WebSocket 连接
+        console.log('登录成功，初始化WebSocket连接');
         initSocket(token);
 
         // 如果是企业管理员或项目经理，获取企业信息

@@ -280,6 +280,16 @@ router.beforeEach((to, from, next) => {
         }
       }
       
+      // 检查是否是项目经理限制的路由
+      if (to.matched.some(record => record.meta.managerOnly)) {
+        const userType = localStorage.getItem('userType')
+        if (userType !== 'manager') {
+          ElMessage.error('该页面仅限项目经理访问')
+          next({ path: '/dashboard' })
+          return
+        }
+      }
+      
       next()
     }
   } else {

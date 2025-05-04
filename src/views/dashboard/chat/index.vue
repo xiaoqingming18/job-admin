@@ -22,15 +22,15 @@
           >
             <el-badge :value="conversation.unreadCount || null" :hidden="!conversation.unreadCount">
               <el-avatar :size="40" :src="conversation.avatar || defaultAvatar">
-                {{ conversation.title.charAt(0) }}
+                {{ conversation.title ? conversation.title.charAt(0) : '?' }}
               </el-avatar>
             </el-badge>
             <div class="chat-info">
               <div class="chat-name">{{ conversation.title }}</div>
               <div class="chat-position">{{ conversation.position }}</div>
-              <div class="chat-last-message">{{ conversation.lastMessage || '暂无消息' }}</div>
+              <div class="chat-last-message">{{ formatLastMessage(conversation.lastMessage) }}</div>
             </div>
-            <div class="chat-time">{{ conversation.lastTime || '' }}</div>
+            <div class="chat-time">{{ formatLastMessageTime(conversation.lastMessage) }}</div>
           </div>
           <el-empty v-if="filteredConversations.length === 0" description="暂无求职者会话" />
         </el-scrollbar>
@@ -71,14 +71,41 @@
                 <el-avatar 
                   v-if="!message.isSelf" 
                   :size="36" 
-                  :src="currentConversation.avatar || defaultAvatar"
+                  :src="message.sender?.avatar || currentConversation.avatar || defaultAvatar"
                 >
-                  {{ currentConversation.title.charAt(0) }}
+                  {{ ((message.sender?.username || currentConversation?.title) || '?').charAt(0) }}
                 </el-avatar>
                 
                 <div class="message-bubble">
                   <div class="message-text">{{ message.content }}</div>
-                  <div class="message-time">{{ formatMessageTime(message.sendTime) }}</div>
+                  <div class="message-footer">
+                    <span class="message-time">{{ formatMessageTime(message.sendTime) }}</span>
+                    <span v-if="message.isSelf" class="message-status">
+                      <el-icon v-if="message.status === 'sending'" class="is-loading"><Loading /></el-icon>
+                      <span v-if="message.status === 'sending'" class="status-text">发送中</span>
+                      
+                      <el-icon v-else-if="message.status === 'sent'" color="#67C23A"><CircleCheck /></el-icon>
+                      <span v-if="message.status === 'sent'" class="status-text">已发送</span>
+                      
+                      <el-icon v-else-if="message.status === 'delivered'" color="#67C23A"><CircleCheck /></el-icon>
+                      <span v-if="message.status === 'delivered'" class="status-text">已送达</span>
+                      
+                      <el-icon v-else-if="message.status === 'read'" color="#67C23A"><CircleCheck /></el-icon>
+                      <span v-if="message.status === 'read'" class="status-text">已读</span>
+                      
+                      <el-icon v-else-if="message.status === 'failed'" color="#F56C6C"><CircleClose /></el-icon>
+                      <span v-if="message.status === 'failed'" class="status-text">发送失败</span>
+                      
+                      <el-button 
+                        v-if="message.status === 'failed'" 
+                        size="small" 
+                        type="text" 
+                        @click="resendMessage(message)"
+                      >
+                        重试
+                      </el-button>
+                    </span>
+                  </div>
                 </div>
                 
                 <el-avatar 
@@ -86,7 +113,7 @@
                   :size="36" 
                   :src="userAvatar || defaultAvatar"
                 >
-                  {{ userName.charAt(0) }}
+                  {{ userName?.charAt(0) || '?' }}
                 </el-avatar>
               </div>
             </div>
@@ -125,13 +152,14 @@
 import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import { formatDate, formatTimeAgo } from '@/utils/format'
 import { getSocket } from '@/utils/socket'
-import { getUserConversations, getConversationDetail, createSingleConversation } from '@/api/im'
+import { getUserConversations, getConversationDetail, createSingleConversation, sendTextMessage } from '@/api/im'
 import { getUserId } from '@/utils/auth'
-import type { Conversation, Message, ChatMessages } from '@/types/im'
-import { ConversationType, MessageType } from '@/types/im'
+import type { Conversation, Message, ChatMessages, UserInfo } from '@/types/im'
+import { ConversationType, MessageType, MessageStatus } from '@/types/im'
+import { createTempMessage, updateMessage, addMessage, findMessageIndex } from '@/utils/messageHelper'
 
 // 默认头像
 const defaultAvatar = new URL('@/assets/default-avatar.png', import.meta.url).href
@@ -177,7 +205,7 @@ const filteredConversations = computed(() => {
     return conversations.value
   }
   return conversations.value.filter(conversation => 
-    conversation.title.includes(searchKeyword.value)
+    conversation.title && conversation.title.includes(searchKeyword.value)
   )
 })
 
@@ -229,12 +257,18 @@ const loadConversationMessages = async (conversationId: number) => {
       // 如果有最后一条消息，添加到消息列表
       if (conversation.lastMessage) {
         // 标记是否为自己发送的消息
-        conversation.lastMessage.isSelf = conversation.lastMessage.senderId === userId.value
-        mockMessages.push(conversation.lastMessage)
+        const lastMessage = {
+          ...conversation.lastMessage,
+          isSelf: conversation.lastMessage.senderId === userId.value,
+          status: conversation.lastMessage.status || MessageStatus.SENT
+        }
+        mockMessages.push(lastMessage)
       }
       
-      // 将消息保存到对应会话的消息记录中
-      chatMessages[conversationId] = mockMessages
+      // 使用解构方式更新，确保响应式更新
+      chatMessages[conversationId] = [...mockMessages]
+      
+      console.log('加载消息完成:', chatMessages[conversationId])
     } else {
       ElMessage.error(response.message || '获取会话详情失败')
     }
@@ -247,50 +281,108 @@ const loadConversationMessages = async (conversationId: number) => {
 }
 
 // 发送消息
-const sendMessage = () => {
+const sendMessage = async () => {
   if (!messageContent.value.trim() || !currentConversation.value) return
   
-  // 获取Socket实例
-  const socket = getSocket()
+  const conversationId = currentConversation.value.id
   
-  // 创建新消息
-  const newMessage: Message = {
-    id: Date.now(),
-    senderId: userId.value,
-    messageType: MessageType.TEXT,
-    content: messageContent.value,
-    sendTime: new Date().toISOString(),
-    isSelf: true
+  // 创建临时消息对象
+  const tempMessage = createTempMessage(
+    userId.value,
+    conversationId,
+    messageContent.value
+  )
+  
+  // 确保消息数组已初始化
+  if (!chatMessages[conversationId]) {
+    chatMessages[conversationId] = []
   }
   
-  // 如果没有该会话的聊天记录，初始化一个
-  if (!chatMessages[currentConversation.value.id]) {
-    chatMessages[currentConversation.value.id] = []
-  }
+  // 添加临时消息到聊天记录
+  chatMessages[conversationId] = addMessage(chatMessages[conversationId], tempMessage)
   
-  // 添加到聊天记录
-  chatMessages[currentConversation.value.id].push(newMessage)
+  console.log('添加消息后长度:', chatMessages[conversationId].length, chatMessages[conversationId])
   
   // 更新最近消息
   if (currentConversation.value) {
-    currentConversation.value.lastMessage = newMessage
+    currentConversation.value.lastMessage = {...tempMessage}
   }
-  
-  // 如果连接了WebSocket，发送消息
-  if (socket) {
-    socket.emit('send_message', {
-      conversationId: currentConversation.value.id,
-      content: messageContent.value
-    })
-  }
-  
-  // 清空输入框
-  messageContent.value = ''
   
   // 滚动到最新消息
   nextTick(() => {
     scrollToBottom()
   })
+  
+  // 清空输入框
+  const messageToSend = messageContent.value
+  messageContent.value = ''
+  
+  try {
+    // 调用API发送消息
+    const response = await sendTextMessage(
+      conversationId,
+      userId.value,
+      messageToSend
+    )
+    
+    console.log('发送消息响应:', response)
+    
+    if (response.code === 0 && response.data) {
+      // 找到临时消息的索引
+      const messageIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
+      
+      console.log('找到临时消息索引:', messageIndex)
+      
+      if (messageIndex !== -1) {
+        // 使用服务器返回的数据更新临时消息
+        const serverMessage = response.data
+        
+        // 通过工具函数更新消息，确保响应式
+        chatMessages[conversationId] = updateMessage(
+          chatMessages[conversationId],
+          messageIndex,
+          {
+            ...serverMessage,
+            isSelf: true,
+            status: MessageStatus.SENT
+          }
+        )
+        
+        console.log('更新后的消息:', chatMessages[conversationId][messageIndex])
+        
+        // 更新最近消息
+        if (currentConversation.value) {
+          currentConversation.value.lastMessage = {...chatMessages[conversationId][messageIndex]}
+        }
+      }
+    } else {
+      throw new Error(response.message || '发送消息失败')
+    }
+  } catch (error) {
+    console.error('发送消息失败:', error)
+    ElMessage.error('发送消息失败，请重试')
+    
+    // 将消息状态更新为发送失败
+    const messageIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
+    
+    if (messageIndex !== -1) {
+      // 使用工具函数更新消息状态
+      chatMessages[conversationId] = updateMessage(
+        chatMessages[conversationId],
+        messageIndex,
+        { status: MessageStatus.FAILED }
+      )
+    }
+    
+    // 获取Socket实例尝试通过Socket发送
+    const socket = getSocket()
+    if (socket) {
+      socket.emit('send_message', {
+        conversationId,
+        content: messageToSend
+      })
+    }
+  }
 }
 
 // 搜索会话
@@ -352,51 +444,11 @@ const registerSocketEvents = () => {
   const socket = getSocket()
   if (!socket) return
   
-  // 接收新消息
-  socket.on('receive_message', (data) => {
-    const { conversationId, senderId, content } = data
-    
-    // 查找对应会话
-    const conversation = conversations.value.find(c => c.id === conversationId)
-    if (!conversation) return
-    
-    // 创建新消息
-    const newMessage: Message = {
-      id: Date.now(),
-      senderId,
-      messageType: MessageType.TEXT,
-      content,
-      sendTime: new Date().toISOString(),
-      isSelf: senderId === userId.value
-    }
-    
-    // 如果没有该会话的聊天记录，初始化一个
-    if (!chatMessages[conversationId]) {
-      chatMessages[conversationId] = []
-    }
-    
-    // 添加到聊天记录
-    chatMessages[conversationId].push(newMessage)
-    
-    // 更新会话的最后一条消息
-    conversation.lastMessage = newMessage
-    
-    // 如果不是当前选中的会话，增加未读消息数
-    if (!currentConversation.value || currentConversation.value.id !== conversationId) {
-      conversation.unreadCount = (conversation.unreadCount || 0) + 1
-    } else {
-      // 当前正在查看该会话，滚动到底部
-      nextTick(() => {
-        scrollToBottom()
-      })
-    }
-    
-    // 新消息提示
-    ElMessage({
-      message: `收到新消息`,
-      type: 'success'
-    })
-  })
+  // 接收新消息 - 监听原有事件
+  socket.on('receive_message', handleNewMessage)
+  
+  // 接收新消息 - 监听标准im:message事件
+  socket.on('im:message', handleNewMessage)
   
   // 对方正在输入
   socket.on('typing', (data) => {
@@ -412,6 +464,97 @@ const registerSocketEvents = () => {
       }, 3000)
     }
   })
+}
+
+// 处理新消息的函数
+const handleNewMessage = (data) => {
+  const { conversationId, senderId, content, messageId, sendTime, messageType = MessageType.TEXT } = data
+  
+  console.log('收到新消息:', data)
+  
+  // 查找对应会话
+  let conversation = conversations.value.find(c => c.id === conversationId)
+  
+  // 如果未找到对应会话，创建一个新会话
+  if (!conversation) {
+    console.warn('未找到对应的会话，创建新会话:', conversationId)
+    
+    // 创建一个新的会话对象
+    const newConversation: Conversation = {
+      id: conversationId,
+      conversationType: ConversationType.SINGLE,
+      title: data.senderName || `会话 ${conversationId}`,
+      createTime: new Date().toISOString(),
+      unreadCount: 1,
+      avatar: data.senderAvatar || '',
+      position: data.senderPosition || ''
+    };
+    
+    // 添加到会话列表
+    conversations.value.push(newConversation);
+    conversation = newConversation;
+  }
+  
+  // 创建新消息
+  const newMessage: Message = {
+    id: messageId || Date.now(),
+    conversationId,
+    senderId,
+    messageType: messageType,
+    content: content || '',
+    sendTime: sendTime || new Date().toISOString(),
+    status: MessageStatus.DELIVERED,
+    isSelf: senderId === userId.value
+  }
+  
+  // 如果是文件或图片消息，添加特定属性
+  if (messageType === MessageType.FILE && data.fileName) {
+    newMessage.fileName = data.fileName
+    newMessage.fileSize = data.fileSize
+    newMessage.mediaUrl = data.mediaUrl
+  } else if (messageType === MessageType.IMAGE && data.mediaUrl) {
+    newMessage.mediaUrl = data.mediaUrl
+  }
+  
+  // 如果没有该会话的聊天记录，初始化一个
+  if (!chatMessages[conversationId]) {
+    chatMessages[conversationId] = []
+  }
+  
+  // 使用工具函数添加消息，确保响应式更新
+  chatMessages[conversationId] = addMessage(chatMessages[conversationId], newMessage)
+  
+  // 更新会话的最后一条消息
+  conversation.lastMessage = {...newMessage}
+  
+  // 如果不是当前选中的会话，增加未读消息数
+  if (!currentConversation.value || currentConversation.value.id !== conversationId) {
+    conversation.unreadCount = (conversation.unreadCount || 0) + 1
+    
+    // 将有新消息的会话移到列表顶部
+    moveConversationToTop(conversation)
+  } else {
+    // 当前正在查看该会话，滚动到底部
+    nextTick(() => {
+      scrollToBottom()
+    })
+  }
+  
+  // 新消息提示
+  ElMessage({
+    message: `收到新消息: ${formatLastMessage(newMessage)}`,
+    type: 'success'
+  })
+}
+
+// 将会话移动到列表顶部
+const moveConversationToTop = (conversation: Conversation) => {
+  // 找到会话索引
+  const index = conversations.value.findIndex(c => c.id === conversation.id)
+  if (index > 0) { // 只有不在顶部时才需要移动
+    conversations.value.splice(index, 1) // 移除当前位置
+    conversations.value.unshift(conversation) // 添加到顶部
+  }
 }
 
 // 监听路由参数变化，如果从求职者详情页跳转过来，则创建或选择对应会话
@@ -473,7 +616,17 @@ const loadConversations = async () => {
     // 从API获取会话列表
     const response = await getUserConversations(userId.value)
     if (response.code === 0 && Array.isArray(response.data)) {
-      conversations.value = response.data
+      // 确保每个会话对象都有默认值，避免空对象
+      conversations.value = response.data.map(conversation => ({
+        id: conversation.id || 0,
+        conversationType: conversation.conversationType || ConversationType.SINGLE,
+        title: conversation.title || '未命名会话',
+        avatar: conversation.avatar || '',
+        lastMessage: conversation.lastMessage || undefined,
+        createTime: conversation.createTime || new Date().toISOString(),
+        unreadCount: conversation.unreadCount || 0,
+        position: conversation.position || ''
+      }));
       
       // 如果有会话，默认选择第一个
       if (conversations.value.length > 0 && !currentConversation.value && !route.query.applicantId) {
@@ -490,6 +643,102 @@ const loadConversations = async () => {
   }
 }
 
+// 重发消息
+const resendMessage = async (message: Message) => {
+  // 获取会话ID
+  const conversationId = currentConversation.value!.id
+  
+  // 找到消息索引
+  const messageIndex = findMessageIndex(chatMessages[conversationId], message.id)
+  
+  if (messageIndex !== -1) {
+    // 先将消息状态更新为"发送中"
+    chatMessages[conversationId] = updateMessage(
+      chatMessages[conversationId],
+      messageIndex,
+      { status: MessageStatus.SENDING }
+    )
+  }
+  
+  try {
+    // 调用API重新发送消息
+    const response = await sendTextMessage(
+      message.conversationId || conversationId,
+      userId.value,
+      message.content
+    )
+    
+    if (response.code === 0 && response.data) {
+      // 找到消息索引（可能已经变化）
+      const updatedIndex = findMessageIndex(chatMessages[conversationId], message.id)
+      
+      if (updatedIndex !== -1) {
+        // 使用服务器返回的消息数据更新
+        const serverMessage = response.data
+        
+        // 使用工具函数更新消息，确保响应式
+        chatMessages[conversationId] = updateMessage(
+          chatMessages[conversationId],
+          updatedIndex,
+          {
+            ...serverMessage,
+            isSelf: true,
+            status: MessageStatus.SENT
+          }
+        )
+        
+        // 更新最近消息
+        if (currentConversation.value && 
+            currentConversation.value.lastMessage && 
+            currentConversation.value.lastMessage.id === message.id) {
+          currentConversation.value.lastMessage = {...chatMessages[conversationId][updatedIndex]}
+        }
+      }
+    } else {
+      throw new Error(response.message || '发送消息失败')
+    }
+  } catch (error) {
+    console.error('重发消息失败:', error)
+    ElMessage.error('重发消息失败，请重试')
+    
+    const updatedIndex = findMessageIndex(chatMessages[conversationId], message.id)
+    if (updatedIndex !== -1) {
+      // 使用工具函数更新消息状态为失败
+      chatMessages[conversationId] = updateMessage(
+        chatMessages[conversationId],
+        updatedIndex,
+        { status: MessageStatus.FAILED }
+      )
+    }
+  }
+}
+
+// 格式化最后一条消息显示
+const formatLastMessage = (lastMessage: Message | undefined): string => {
+  if (!lastMessage) return '暂无消息';
+  if (typeof lastMessage === 'string') return lastMessage;
+  
+  // 根据消息类型格式化
+  switch (lastMessage.messageType) {
+    case MessageType.TEXT:
+      return lastMessage.content || '文本消息';
+    case MessageType.IMAGE:
+      return '[图片]';
+    case MessageType.FILE:
+      return `[文件] ${lastMessage.fileName || ''}`;
+    case MessageType.SYSTEM:
+      return '[系统通知]';
+    default:
+      return lastMessage.content || '暂无消息';
+  }
+}
+
+// 格式化最后一条消息的时间
+const formatLastMessageTime = (lastMessage: Message | undefined): string => {
+  if (!lastMessage || !lastMessage.sendTime) return '';
+  return formatTimeAgo(lastMessage.sendTime);
+}
+
 onMounted(() => {
   // 加载会话列表
   loadConversations()
@@ -503,6 +752,7 @@ onBeforeUnmount(() => {
   const socket = getSocket()
   if (socket) {
     socket.off('receive_message')
+    socket.off('im:message') // 移除im:message事件监听
     socket.off('typing')
   }
 })
@@ -666,22 +916,32 @@ onBeforeUnmount(() => {
   word-wrap: break-word;
 }
 
+.message-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 8px 4px 0;
+}
+
 .message-time {
   font-size: 12px;
   color: #c0c4cc;
-  text-align: right;
-  padding: 0 8px 4px 0;
+  margin-right: 4px;
+}
+
+.message-status {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.status-text {
+  margin: 0 4px;
+  color: #a0cfff;
 }
 
 .message-self .message-time {
   color: #a0cfff;
-}
-
-.message-status {
-  font-size: 12px;
-  color: #909399;
-  text-align: center;
-  margin: 8px 0;
 }
 
 .chat-input {
@@ -702,4 +962,4 @@ onBeforeUnmount(() => {
   height: 100%;
   background-color: #f5f7fa;
 }
-</style> 
+</style>
