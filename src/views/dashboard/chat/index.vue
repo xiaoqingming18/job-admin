@@ -77,7 +77,29 @@
                 </el-avatar>
                 
                 <div class="message-bubble">
-                  <div class="message-text">{{ message.content }}</div>
+                  <!-- 文本消息 -->
+                  <div class="message-text" v-if="message.messageType === 'text'">{{ message.content }}</div>
+                  
+                  <!-- 图片消息 -->
+                  <div class="message-image" v-else-if="message.messageType === 'image'">
+                    <el-image 
+                      :src="message.mediaUrl" 
+                      :preview-src-list="[message.mediaUrl]"
+                      fit="cover"
+                      :initial-index="0"
+                      class="message-img"
+                    />
+                  </div>
+
+                  <!-- 文件消息 -->
+                  <div class="message-file" v-else-if="message.messageType === 'file'">
+                    <a :href="message.mediaUrl" target="_blank">
+                      <el-icon><Document /></el-icon>
+                      {{ message.fileName || '未命名文件' }}
+                      <span v-if="message.fileSize">({{ formatFileSize(message.fileSize) }})</span>
+                    </a>
+                  </div>
+
                   <div class="message-footer">
                     <span class="message-time">{{ formatMessageTime(message.sendTime) }}</span>
                     <span v-if="message.isSelf" class="message-status">
@@ -133,8 +155,28 @@
             resize="none"
             @keydown.enter.prevent="sendMessage"
           />
+          <div class="preview-area" v-if="imagePreview">
+            <div class="image-preview">
+              <el-image :src="imagePreview" fit="cover" class="preview-img" />
+              <el-button type="danger" circle size="small" class="remove-preview" @click="removeImagePreview">
+                <el-icon><Close /></el-icon>
+              </el-button>
+            </div>
+          </div>
           <div class="input-actions">
-            <el-button type="primary" @click="sendMessage" :disabled="!messageContent.trim()">
+            <el-upload
+              class="upload-image"
+              action="#"
+              :auto-upload="false"
+              :show-file-list="false"
+              accept="image/*"
+              :on-change="handleImageSelect"
+            >
+              <el-button type="text">
+                <el-icon><Picture /></el-icon>
+              </el-button>
+            </el-upload>
+            <el-button type="primary" @click="sendMessage" :disabled="!canSendMessage">
               发送
             </el-button>
           </div>
@@ -152,14 +194,16 @@
 import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
+import { Search, Loading, CircleCheck, CircleClose, Document, Picture, Close } from '@element-plus/icons-vue'
 import { formatDate, formatTimeAgo } from '@/utils/format'
 import { getSocket } from '@/utils/socket'
-import { getUserConversations, getConversationDetail, createSingleConversation, sendTextMessage } from '@/api/im'
+import { getUserConversations, getConversationDetail, createSingleConversation, sendTextMessage, sendImageMessage, sendFileMessage, sendMediaMessage } from '@/api/im'
 import { getUserId } from '@/utils/auth'
 import type { Conversation, Message, ChatMessages, UserInfo } from '@/types/im'
 import { ConversationType, MessageType, MessageStatus } from '@/types/im'
 import { createTempMessage, updateMessage, addMessage, findMessageIndex } from '@/utils/messageHelper'
+import { upload } from '@/api/file'
+import type { UploadFile } from 'element-plus'
 
 // 默认头像
 const defaultAvatar = new URL('@/assets/default-avatar.png', import.meta.url).href
@@ -178,6 +222,10 @@ const searchKeyword = ref('')
 
 // 消息输入内容
 const messageContent = ref('')
+
+// 图片预览
+const imagePreview = ref('')
+const selectedImage = ref<File | null>(null)
 
 // 是否正在输入
 const isTyping = ref(false)
@@ -198,6 +246,14 @@ const chatMessages = reactive<Record<number, Message[]>>({})
 // 加载状态
 const loading = ref(false)
 const loadingMessages = ref(false)
+
+// 处理图片上传
+const uploading = ref(false)
+
+// 是否可以发送消息
+const canSendMessage = computed(() => {
+  return messageContent.value.trim() !== '' || imagePreview.value !== ''
+})
 
 // 根据搜索关键词过滤会话
 const filteredConversations = computed(() => {
@@ -280,18 +336,174 @@ const loadConversationMessages = async (conversationId: number) => {
   }
 }
 
+// 处理图片选择
+const handleImageSelect = (file: UploadFile) => {
+  if (!file.raw) {
+    ElMessage.error('文件加载失败')
+    return
+  }
+
+  // 验证文件类型
+  const isImage = file.raw.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件！')
+    return
+  }
+
+  // 验证文件大小（2MB）
+  const isLt2M = file.raw.size / 1024 / 1024 < 2
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB！')
+    return
+  }
+
+  // 保存选择的图片文件
+  selectedImage.value = file.raw
+  
+  // 生成预览
+  imagePreview.value = URL.createObjectURL(file.raw)
+}
+
+// 移除图片预览
+const removeImagePreview = () => {
+  if (imagePreview.value) {
+    URL.revokeObjectURL(imagePreview.value)
+    imagePreview.value = ''
+    selectedImage.value = null
+  }
+}
+
 // 发送消息
 const sendMessage = async () => {
-  if (!messageContent.value.trim() || !currentConversation.value) return
+  if (!canSendMessage.value || !currentConversation.value) return
   
   const conversationId = currentConversation.value.id
   
-  // 创建临时消息对象
+  // 如果有图片，发送图片消息
+  if (selectedImage.value) {
+    await sendImageMessageWithUpload()
+    return
+  }
+  
+  // 否则发送文本消息
+  if (messageContent.value.trim()) {
+    // 创建临时消息对象
+    const tempMessage = createTempMessage(
+      userId.value,
+      conversationId,
+      messageContent.value
+    )
+    
+    // 确保消息数组已初始化
+    if (!chatMessages[conversationId]) {
+      chatMessages[conversationId] = []
+    }
+    
+    // 添加临时消息到聊天记录
+    chatMessages[conversationId] = addMessage(chatMessages[conversationId], tempMessage)
+    
+    console.log('添加消息后长度:', chatMessages[conversationId].length, chatMessages[conversationId])
+    
+    // 更新最近消息
+    if (currentConversation.value) {
+      currentConversation.value.lastMessage = {...tempMessage}
+    }
+    
+    // 滚动到最新消息
+    nextTick(() => {
+      scrollToBottom()
+    })
+    
+    // 清空输入框
+    const messageToSend = messageContent.value
+    messageContent.value = ''
+    
+    try {
+      // 调用API发送消息
+      const response = await sendTextMessage(
+        conversationId,
+        userId.value,
+        messageToSend
+      )
+      
+      console.log('发送消息响应:', response)
+      
+      if (response.code === 0 && response.data) {
+        // 找到临时消息的索引
+        const messageIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
+        
+        console.log('找到临时消息索引:', messageIndex)
+        
+        if (messageIndex !== -1) {
+          // 使用服务器返回的数据更新临时消息
+          const serverMessage = response.data
+          
+          // 通过工具函数更新消息，确保响应式
+          chatMessages[conversationId] = updateMessage(
+            chatMessages[conversationId],
+            messageIndex,
+            {
+              ...serverMessage,
+              isSelf: true,
+              status: MessageStatus.SENT
+            }
+          )
+          
+          console.log('更新后的消息:', chatMessages[conversationId][messageIndex])
+          
+          // 更新最近消息
+          if (currentConversation.value) {
+            currentConversation.value.lastMessage = {...chatMessages[conversationId][messageIndex]}
+          }
+        }
+      } else {
+        throw new Error(response.message || '发送消息失败')
+      }
+    } catch (error) {
+      console.error('发送消息失败:', error)
+      ElMessage.error('发送消息失败，请重试')
+      
+      // 将消息状态更新为发送失败
+      const messageIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
+      
+      if (messageIndex !== -1) {
+        // 使用工具函数更新消息状态
+        chatMessages[conversationId] = updateMessage(
+          chatMessages[conversationId],
+          messageIndex,
+          { status: MessageStatus.FAILED }
+        )
+      }
+      
+      // 获取Socket实例尝试通过Socket发送
+      const socket = getSocket()
+      if (socket) {
+        socket.emit('send_message', {
+          conversationId,
+          content: messageToSend
+        })
+      }
+    }
+  }
+}
+
+// 发送图片消息（包括上传）
+const sendImageMessageWithUpload = async () => {
+  if (!selectedImage.value || !currentConversation.value) return
+  
+  const conversationId = currentConversation.value.id
+  const imageFile = selectedImage.value
+  
+  // 创建临时消息对象 - 图片消息
   const tempMessage = createTempMessage(
     userId.value,
     conversationId,
-    messageContent.value
+    '',
+    MessageType.IMAGE
   )
+  
+  // 清空预览
+  removeImagePreview()
   
   // 确保消息数组已初始化
   if (!chatMessages[conversationId]) {
@@ -300,8 +512,6 @@ const sendMessage = async () => {
   
   // 添加临时消息到聊天记录
   chatMessages[conversationId] = addMessage(chatMessages[conversationId], tempMessage)
-  
-  console.log('添加消息后长度:', chatMessages[conversationId].length, chatMessages[conversationId])
   
   // 更新最近消息
   if (currentConversation.value) {
@@ -313,75 +523,72 @@ const sendMessage = async () => {
     scrollToBottom()
   })
   
-  // 清空输入框
-  const messageToSend = messageContent.value
-  messageContent.value = ''
-  
+  uploading.value = true
   try {
-    // 调用API发送消息
-    const response = await sendTextMessage(
-      conversationId,
-      userId.value,
-      messageToSend
-    )
-    
-    console.log('发送消息响应:', response)
-    
-    if (response.code === 0 && response.data) {
-      // 找到临时消息的索引
-      const messageIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
-      
-      console.log('找到临时消息索引:', messageIndex)
-      
-      if (messageIndex !== -1) {
-        // 使用服务器返回的数据更新临时消息
-        const serverMessage = response.data
-        
-        // 通过工具函数更新消息，确保响应式
+    // 上传图片
+    const res = await upload(imageFile, 'chat-images')
+    if (res.code === 0 && res.data) {
+      // 更新临时消息的mediaUrl
+      const updatedIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
+      if (updatedIndex !== -1) {
         chatMessages[conversationId] = updateMessage(
           chatMessages[conversationId],
-          messageIndex,
-          {
-            ...serverMessage,
-            isSelf: true,
+          updatedIndex,
+          { 
+            mediaUrl: res.data.url,
             status: MessageStatus.SENT
           }
         )
-        
-        console.log('更新后的消息:', chatMessages[conversationId][messageIndex])
+      }
+      
+      // 发送媒体消息到服务器
+      const response = await sendMediaMessage(
+        conversationId, 
+        userId.value, 
+        res.data.url,
+        MessageType.IMAGE
+      )
+      if (response.code === 0 && response.data) {
+        // 更新临时消息的ID和状态
+        const updatedIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
+        if (updatedIndex !== -1) {
+          chatMessages[conversationId] = updateMessage(
+            chatMessages[conversationId],
+            updatedIndex,
+            { 
+              id: response.data.id,
+              status: MessageStatus.DELIVERED
+            }
+          )
+        }
         
         // 更新最近消息
         if (currentConversation.value) {
-          currentConversation.value.lastMessage = {...chatMessages[conversationId][messageIndex]}
+          currentConversation.value.lastMessage = {
+            ...chatMessages[conversationId][updatedIndex]
+          }
         }
+      } else {
+        throw new Error(response.message || '发送图片消息失败')
       }
     } else {
-      throw new Error(response.message || '发送消息失败')
+      throw new Error(res.message || '图片上传失败')
     }
-  } catch (error) {
-    console.error('发送消息失败:', error)
-    ElMessage.error('发送消息失败，请重试')
+  } catch (error: any) {
+    console.error('图片上传或发送失败', error)
+    ElMessage.error(error.message || '图片上传失败，请稍后再试')
     
-    // 将消息状态更新为发送失败
-    const messageIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
-    
-    if (messageIndex !== -1) {
-      // 使用工具函数更新消息状态
+    // 更新临时消息状态为失败
+    const updatedIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
+    if (updatedIndex !== -1) {
       chatMessages[conversationId] = updateMessage(
         chatMessages[conversationId],
-        messageIndex,
+        updatedIndex,
         { status: MessageStatus.FAILED }
       )
     }
-    
-    // 获取Socket实例尝试通过Socket发送
-    const socket = getSocket()
-    if (socket) {
-      socket.emit('send_message', {
-        conversationId,
-        content: messageToSend
-      })
-    }
+  } finally {
+    uploading.value = false
   }
 }
 
@@ -739,6 +946,19 @@ const formatLastMessageTime = (lastMessage: Message | undefined): string => {
   return formatTimeAgo(lastMessage.sendTime);
 }
 
+// 格式化文件大小
+const formatFileSize = (size: number): string => {
+  if (size < 1024) {
+    return size + 'B';
+  } else if (size < 1024 * 1024) {
+    return (size / 1024).toFixed(2) + 'KB';
+  } else if (size < 1024 * 1024 * 1024) {
+    return (size / 1024 / 1024).toFixed(2) + 'MB';
+  } else {
+    return (size / 1024 / 1024 / 1024).toFixed(2) + 'GB';
+  }
+}
+
 onMounted(() => {
   // 加载会话列表
   loadConversations()
@@ -897,12 +1117,18 @@ onBeforeUnmount(() => {
 .message-bubble {
   margin: 0 12px;
   max-width: 70%;
+  padding: 10px 12px;
 }
 
 .message-self .message-bubble {
   background-color: #409eff;
   color: white;
   border-radius: 16px 0 16px 16px;
+}
+
+.message-self .message-bubble a,
+.message-self .message-bubble .el-icon {
+  color: white;
 }
 
 .message-bubble:not(.message-self .message-bubble) {
@@ -951,8 +1177,17 @@ onBeforeUnmount(() => {
 
 .input-actions {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 8px;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.upload-image {
+  margin-right: 10px;
+}
+
+.el-upload {
+  display: inline-block;
 }
 
 .chat-empty {
@@ -961,5 +1196,62 @@ onBeforeUnmount(() => {
   align-items: center;
   height: 100%;
   background-color: #f5f7fa;
+}
+
+.message-image {
+  margin-bottom: 4px;
+}
+
+.message-img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  cursor: pointer;
+  object-fit: contain;
+}
+
+.message-file {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.message-file a {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  word-break: break-word;
+}
+
+.message-file i {
+  margin-right: 8px;
+}
+
+.preview-area {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 8px;
+  background-color: #f9fafc;
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.preview-img {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 4px;
+}
+
+.remove-preview {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  opacity: 0.8;
 }
 </style>

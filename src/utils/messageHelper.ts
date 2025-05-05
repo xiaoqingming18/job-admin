@@ -51,18 +51,20 @@ export function addMessage(messages: Message[], message: Message): Message[] {
  * @param userId 当前用户ID
  * @param conversationId 会话ID
  * @param content 消息内容
+ * @param messageType 消息类型，默认为文本
  * @returns 临时消息对象
  */
 export function createTempMessage(
   userId: number,
   conversationId: number,
-  content: string
+  content: string,
+  messageType: MessageType = MessageType.TEXT
 ): Message {
   return {
     id: Date.now(),  // 临时ID
     conversationId,
     senderId: userId,
-    messageType: MessageType.TEXT,
+    messageType,
     content,
     sendTime: new Date().toISOString(),
     status: MessageStatus.SENDING,

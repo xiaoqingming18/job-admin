@@ -37,4 +37,62 @@ export const createSingleConversation = (userIdA: number, userIdB: number) => {
  */
 export const sendTextMessage = (conversationId: number, senderId: number, content: string) => {
   return post('/api/im/messages/text', { conversationId, senderId, content })
+}
+
+/**
+ * 发送图片消息
+ * @param conversationId 会话ID
+ * @param senderId 发送者ID
+ * @param mediaUrl 图片URL
+ * @returns 发送的消息信息
+ */
+export const sendImageMessage = (conversationId: number, senderId: number, mediaUrl: string) => {
+  return post('/api/im/messages/image', { conversationId, senderId, mediaUrl })
+}
+
+/**
+ * 发送媒体消息
+ * @param conversationId 会话ID
+ * @param senderId 发送者ID
+ * @param mediaUrl 媒体URL
+ * @param messageType 消息类型
+ * @returns 发送的消息信息
+ */
+export const sendMediaMessage = (
+  conversationId: number, 
+  senderId: number, 
+  mediaUrl: string,
+  messageType: string = 'image'
+) => {
+  return post('/api/im/messages/media', { 
+    conversationId, 
+    senderId, 
+    mediaUrl,
+    messageType
+  })
+}
+
+/**
+ * 发送文件消息
+ * @param conversationId 会话ID
+ * @param senderId 发送者ID
+ * @param mediaUrl 文件URL
+ * @param fileName 文件名
+ * @param fileSize 文件大小
+ * @returns 发送的消息信息
+ */
+export const sendFileMessage = (
+  conversationId: number, 
+  senderId: number, 
+  mediaUrl: string, 
+  fileName: string, 
+  fileSize: number
+) => {
+  return post('/api/im/messages/file', { 
+    conversationId, 
+    senderId, 
+    mediaUrl, 
+    fileName, 
+    fileSize 
+  })
 } 
