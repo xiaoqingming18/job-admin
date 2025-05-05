@@ -24,7 +24,7 @@ import type {
  * @param data 工种类别信息
  */
 export const addOccupationCategory = (data: AddOccupationCategoryParams) => {
-  return post<CommonResponse<OccupationCategory>>('/occupation/category/add', data)
+  return post<CommonResponse<OccupationCategory>>('/api/occupation/category/add', data)
 }
 
 /**
@@ -32,7 +32,7 @@ export const addOccupationCategory = (data: AddOccupationCategoryParams) => {
  * @param data 工种类别信息
  */
 export const updateOccupationCategory = (data: UpdateOccupationCategoryParams) => {
-  return put<CommonResponse<OccupationCategory>>('/occupation/category/update', data)
+  return put<CommonResponse<OccupationCategory>>('/api/occupation/category/update', data)
 }
 
 /**
@@ -40,14 +40,14 @@ export const updateOccupationCategory = (data: UpdateOccupationCategoryParams) =
  * @param id 类别ID
  */
 export const getOccupationCategoryInfo = (id: number) => {
-  return get<CommonResponse<OccupationCategory>>(`/occupation/category/info/${id}`)
+  return get<CommonResponse<OccupationCategory>>(`/api/occupation/category/info/${id}`)
 }
 
 /**
  * 获取工种类别列表
  */
 export const getOccupationCategoryList = () => {
-  return get<CommonResponse<OccupationCategory[]>>('/occupation/category/list')
+  return get<CommonResponse<OccupationCategory[]>>('/api/occupation/category/list')
 }
 
 /**
@@ -55,7 +55,7 @@ export const getOccupationCategoryList = () => {
  * @param id 类别ID
  */
 export const deleteOccupationCategory = (id: number) => {
-  return del<CommonResponse<string>>(`/occupation/category/delete/${id}`)
+  return del<CommonResponse<string>>(`/api/occupation/category/delete/${id}`)
 }
 
 // ==================== 工种接口 ====================
@@ -65,7 +65,7 @@ export const deleteOccupationCategory = (id: number) => {
  * @param data 工种信息
  */
 export const addOccupation = (data: AddOccupationParams) => {
-  return post<CommonResponse<Occupation>>('/occupation/add', data)
+  return post<CommonResponse<Occupation>>('/api/occupation/add', data)
 }
 
 /**
@@ -73,7 +73,7 @@ export const addOccupation = (data: AddOccupationParams) => {
  * @param data 工种信息
  */
 export const updateOccupation = (data: UpdateOccupationParams) => {
-  return put<CommonResponse<Occupation>>('/occupation/update', data)
+  return put<CommonResponse<Occupation>>('/api/occupation/update', data)
 }
 
 /**
@@ -81,7 +81,7 @@ export const updateOccupation = (data: UpdateOccupationParams) => {
  * @param data 状态信息
  */
 export const updateOccupationStatus = (data: UpdateOccupationStatusParams) => {
-  return put<CommonResponse<Occupation>>('/occupation/status', data)
+  return put<CommonResponse<Occupation>>('/api/occupation/status', data)
 }
 
 /**
@@ -89,7 +89,7 @@ export const updateOccupationStatus = (data: UpdateOccupationStatusParams) => {
  * @param id 工种ID
  */
 export const getOccupationInfo = (id: number) => {
-  return get<CommonResponse<Occupation>>(`/occupation/info/${id}`)
+  return get<CommonResponse<Occupation>>(`/api/occupation/info/${id}`)
 }
 
 /**
@@ -101,7 +101,7 @@ export const getOccupationPage = (params: {
   size?: number
   categoryId?: number
 }) => {
-  return get<CommonResponse<PageResponse<OccupationListItem>>>('/occupation/page', params)
+  return get<CommonResponse<PageResponse<OccupationListItem>>>('/api/occupation/page', params)
 }
 
 /**
@@ -109,7 +109,7 @@ export const getOccupationPage = (params: {
  * @param categoryId 类别ID
  */
 export const getOccupationByCategory = (categoryId: number) => {
-  return get<CommonResponse<OccupationListItem[]>>(`/occupation/by-category/${categoryId}`)
+  return get<CommonResponse<OccupationListItem[]>>(`/api/occupation/by-category/${categoryId}`)
 }
 
 /**
@@ -120,7 +120,7 @@ export const getOccupationByWage = (params: {
   minWage?: number
   maxWage?: number
 }) => {
-  return get<CommonResponse<OccupationListItem[]>>('/occupation/by-wage', params)
+  return get<CommonResponse<OccupationListItem[]>>('/api/occupation/by-wage', params)
 }
 
 /**
@@ -128,7 +128,7 @@ export const getOccupationByWage = (params: {
  * @param level 难度等级
  */
 export const getOccupationByDifficulty = (level: number) => {
-  return get<CommonResponse<OccupationListItem[]>>(`/occupation/by-difficulty/${level}`)
+  return get<CommonResponse<OccupationListItem[]>>(`/api/occupation/by-difficulty/${level}`)
 }
 
 /**
@@ -136,7 +136,7 @@ export const getOccupationByDifficulty = (level: number) => {
  * @param params 搜索参数
  */
 export const searchOccupation = (params: OccupationSearchParams) => {
-  return get<CommonResponse<OccupationListItem[]>>('/occupation/search', params)
+  return get<CommonResponse<OccupationListItem[]>>('/api/occupation/search', params)
 }
 
 /**
@@ -144,7 +144,7 @@ export const searchOccupation = (params: OccupationSearchParams) => {
  * @param limit 返回数量，默认5
  */
 export const getHotOccupations = (limit?: number) => {
-  return get<CommonResponse<OccupationListItem[]>>('/occupation/hot', { limit })
+  return get<CommonResponse<OccupationListItem[]>>('/api/occupation/hot', { limit })
 }
 
 /**
@@ -152,5 +152,5 @@ export const getHotOccupations = (limit?: number) => {
  * @param id 工种ID
  */
 export const deleteOccupation = (id: number) => {
-  return del<CommonResponse<string>>(`/occupation/delete/${id}`)
+  return del<CommonResponse<string>>(`/api/occupation/delete/${id}`)
 }
