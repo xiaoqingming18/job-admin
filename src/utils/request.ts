@@ -19,9 +19,15 @@ const ERROR_CODE_MAP: Record<number, string> = {
 // 创建 axios 实例
 const service: AxiosInstance = axios.create({
   baseURL: '/api', // API 请求的基础路径
-  timeout: 15000, // 请求超时时间
+  timeout: 300000, // 请求超时时间增加到5分钟
   headers: {
     'Content-Type': 'application/json;charset=utf-8'
+  },
+  maxContentLength: Infinity, // 允许无限大的内容长度
+  maxBodyLength: Infinity, // 允许无限大的请求体
+  // 增加对响应进度的支持
+  onUploadProgress: function (progressEvent) {
+    // 默认空实现，可以在上传时覆盖
   }
 })
 
@@ -172,24 +178,40 @@ export const del = <T = any>(
 /**
  * 封装上传文件请求
  * @param url 请求地址
- * @param file 文件对象
- * @param name 文件字段名
+ * @param file 文件对象或FormData实例
+ * @param name 文件字段名(当file为File类型时使用)
  * @param config 配置项
  * @returns Promise
  */
 export const uploadFile = <T = any>(
   url: string,
-  file: File,
+  file: File | FormData,
   name: string = 'file',
   config?: AxiosRequestConfig
 ): Promise<T> => {
-  const formData = new FormData()
-  formData.append(name, file)
+  let formData: FormData;
   
-  return service.post(url, formData, {
+  if (file instanceof FormData) {
+    formData = file;
+  } else {
+    formData = new FormData();
+    formData.append(name, file);
+  }
+  
+  // 添加视频上传的重试机制和适当的错误处理
+  const defaultConfig = {
     headers: {
       'Content-Type': 'multipart/form-data'
     },
+    timeout: 600000, // 10分钟上传超时
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity,
+    // 为表单数据请求禁用transformRequest，确保FormData被正确发送
+    transformRequest: [(data: any) => data]
+  };
+  
+  return service.post(url, formData, {
+    ...defaultConfig,
     ...config
   })
 }

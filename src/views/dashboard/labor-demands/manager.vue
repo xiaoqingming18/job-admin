@@ -99,7 +99,7 @@
                   size="small" 
                   @click="handleSubmit(scope.row)"
                 >
-                  提交
+                  发布
                 </el-button>
                 <el-button 
                   v-if="scope.row.status === 'filled'" 
@@ -218,7 +218,7 @@
 
         <div class="drawer-footer">
           <el-button-group v-if="currentDemand.status === 'open'">
-            <el-button type="success" @click="handleSubmit(currentDemand)">提交审核</el-button>
+            <el-button type="success" @click="handleSubmit(currentDemand)">发布</el-button>
             <el-button type="primary" @click="handleEdit(currentDemand)">编辑</el-button>
             <el-button type="danger" @click="handleDelete(currentDemand)">删除</el-button>
           </el-button-group>
@@ -977,31 +977,19 @@ const submitForm = async () => {
   })
 }
 
-// 提交草稿需求
+// 发布劳务需求
 const handleSubmit = async (row: LaborDemandListItem | LaborDemand) => {
-  ElMessageBox.confirm(
-    '确定要提交此劳务需求进行审核吗？',
-    '提交确认',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'info'
-    }
-  ).then(async () => {
-    try {
-      // 使用新API更新状态为open
-      await changeLaborDemandStatus({ 
-        id: row.id, 
-        status: 'open' 
-      })
-      ElMessage.success('已提交审核')
-      refreshData()
-    } catch (error: any) {
-      ElMessage.error(error.message || '提交失败，请稍后再试')
-    }
-  }).catch(() => {
-    // 用户取消操作
-  })
+  try {
+    // 直接更新状态为open，无需审核
+    await changeLaborDemandStatus({ 
+      id: row.id, 
+      status: 'open' 
+    })
+    ElMessage.success('劳务需求已发布')
+    refreshData()
+  } catch (error: any) {
+    ElMessage.error(error.message || '发布失败，请稍后再试')
+  }
 }
 
 // 标记完成

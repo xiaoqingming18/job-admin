@@ -91,6 +91,16 @@
                     />
                   </div>
 
+                  <!-- 视频消息 -->
+                  <div class="message-video" v-else-if="message.messageType === 'video'">
+                    <video 
+                      controls
+                      class="message-video-player"
+                      :src="message.mediaUrl"
+                      preload="metadata"
+                    ></video>
+                  </div>
+
                   <!-- 文件消息 -->
                   <div class="message-file" v-else-if="message.messageType === 'file'">
                     <a :href="message.mediaUrl" target="_blank">
@@ -147,35 +157,52 @@
         </div>
         
         <div class="chat-input">
-          <el-input
-            v-model="messageContent"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入消息..."
-            resize="none"
-            @keydown.enter.prevent="sendMessage"
-          />
-          <div class="preview-area" v-if="imagePreview">
-            <div class="image-preview">
-              <el-image :src="imagePreview" fit="cover" class="preview-img" />
-              <el-button type="danger" circle size="small" class="remove-preview" @click="removeImagePreview">
-                <el-icon><Close /></el-icon>
-              </el-button>
+          <div class="input-container">
+            <el-input
+              v-model="messageContent"
+              type="textarea"
+              :rows="imagePreview ? 2 : 3"
+              placeholder="请输入消息..."
+              resize="none"
+              @keydown.enter.prevent="sendMessage"
+              ref="messageInput"
+            />
+            <div class="preview-area" v-if="imagePreview">
+              <div class="image-preview">
+                <el-image :src="imagePreview" fit="cover" class="preview-img" />
+                <el-button type="danger" circle size="small" class="remove-preview" @click="removeImagePreview">
+                  <el-icon><Close /></el-icon>
+                </el-button>
+              </div>
             </div>
           </div>
           <div class="input-actions">
-            <el-upload
-              class="upload-image"
-              action="#"
-              :auto-upload="false"
-              :show-file-list="false"
-              accept="image/*"
-              :on-change="handleImageSelect"
-            >
-              <el-button type="text">
-                <el-icon><Picture /></el-icon>
-              </el-button>
-            </el-upload>
+            <div class="action-buttons">
+              <el-upload
+                class="upload-image"
+                action="#"
+                :auto-upload="false"
+                :show-file-list="false"
+                accept="image/*"
+                :on-change="handleImageSelect"
+              >
+                <el-button type="text">
+                  <el-icon><Picture /></el-icon>
+                </el-button>
+              </el-upload>
+              <el-upload
+                class="upload-video"
+                action="#"
+                :auto-upload="false"
+                :show-file-list="false"
+                accept="video/*"
+                :on-change="handleVideoSelect"
+              >
+                <el-button type="text">
+                  <el-icon><VideoCamera /></el-icon>
+                </el-button>
+              </el-upload>
+            </div>
             <el-button type="primary" @click="sendMessage" :disabled="!canSendMessage">
               发送
             </el-button>
@@ -194,7 +221,7 @@
 import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Loading, CircleCheck, CircleClose, Document, Picture, Close } from '@element-plus/icons-vue'
+import { Search, Loading, CircleCheck, CircleClose, Document, Picture, Close, VideoCamera } from '@element-plus/icons-vue'
 import { formatDate, formatTimeAgo } from '@/utils/format'
 import { getSocket } from '@/utils/socket'
 import { getUserConversations, getConversationDetail, createSingleConversation, sendTextMessage, sendImageMessage, sendFileMessage, sendMediaMessage } from '@/api/im'
@@ -207,6 +234,8 @@ import type { UploadFile } from 'element-plus'
 
 // 默认头像
 const defaultAvatar = new URL('@/assets/default-avatar.png', import.meta.url).href
+// 视频占位图（Base64编码）
+const videoPlaceholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAF0WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxNDggNzkuMTY0MDM2LCAyMDE5LzA4LzEzLTAxOjA2OjU3ICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1sbnM6cGhvdG9zaG9wPSJodHRwOi8vbnMuYWRvYmUuY29tL3Bob3Rvc2hvcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgMjEuMCAoV2luZG93cykiIHhtcDpDcmVhdGVEYXRlPSIyMDIzLTA1LTA1VDE1OjMwOjEwKzA4OjAwIiB4bXA6TW9kaWZ5RGF0ZT0iMjAyMy0wNS0wNVQxNTozMjoxNyswODowMCIgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyMy0wNS0wNVQxNTozMjoxNyswODowMCIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiIHBob3Rvc2hvcDpJQ0NQcm9maWxlPSJzUkdCIElFQzYxOTY2LTIuMSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpjNzZmYmM1ZS1lNWE4LTRlNDktOWQ1OS1kZjhiNzk3ZTk0ZWMiIHhtcE1NOkRvY3VtZW50SUQ9ImFkb2JlOmRvY2lkOnBob3Rvc2hvcDo0ZDMzODQxZS1lY2U1LTFiNDYtYjQwZi03MzQ1ZTc4NzE4OWIiIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpiMGZhNDY3OS0zYTkyLTNmNGItODg0NC05NzVmZWUzZTJlOGUiPiA8eG1wTU06SGlzdG9yeT4gPHJkZjpTZXE+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJjcmVhdGVkIiBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOmIwZmE0Njc5LTNhOTItM2Y0Yi04ODQ0LTk3NWZlZTNlMmU4ZSIgc3RFdnQ6d2hlbj0iMjAyMy0wNS0wNVQxNTozMDoxMCswODowMCIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIDIxLjAgKFdpbmRvd3MpIi8+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJzYXZlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDpjNzZmYmM1ZS1lNWE4LTRlNDktOWQ1OS1kZjhiNzk3ZTk0ZWMiIHN0RXZ0OndoZW49IjIwMjMtMDUtMDVUMTU6MzI6MTcrMDg6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCAyMS4wIChXaW5kb3dzKSIgc3RFdnQ6Y2hhbmdlZD0iLyIvPiA8L3JkZjpTZXE+IDwveG1wTU06SGlzdG9yeT4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6dE0cNAAAQXklEQVR4nO2deZAdxXXGv+67s2lGo9FqtIxWBAiBAMEiEAgQO8YYjA3YYAdb2BgMtgGX7dgVVxynXKnEjp2kXKkklcofscs2tjEbxnixEAYbsARiMWAQQmhfZ9FoRjOaGc3MvO7+8kdP6/b09JvlvXlv5s35ql5pXr/u032/6dvdt8/pJhEBI4SXyiqsqKtrrgYAY8ymTLVZOVPbYxKmI187p2jLRwwOZhTAaIEFMGKwAEYMXWULUASJSERkInnuZSQQkSGiXP5eHAGMGCyAEYMF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'
 
 // 路由
 const router = useRouter()
@@ -222,10 +251,12 @@ const searchKeyword = ref('')
 
 // 消息输入内容
 const messageContent = ref('')
+const messageInput = ref()
 
 // 图片预览
 const imagePreview = ref('')
 const selectedImage = ref<File | null>(null)
+const mediaType = ref<'image' | 'video'>('image')
 
 // 是否正在输入
 const isTyping = ref(false)
@@ -350,27 +381,73 @@ const handleImageSelect = (file: UploadFile) => {
     return
   }
 
-  // 验证文件大小（2MB）
-  const isLt2M = file.raw.size / 1024 / 1024 < 2
-  if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB！')
+  // 验证文件大小（10MB）
+  const isLt10M = file.raw.size / 1024 / 1024 < 10
+  if (!isLt10M) {
+    ElMessage.error('图片大小不能超过 10MB！')
     return
   }
 
+  // 清除之前选择的媒体
+  removeImagePreview()
+  
   // 保存选择的图片文件
   selectedImage.value = file.raw
+  mediaType.value = 'image'
   
   // 生成预览
   imagePreview.value = URL.createObjectURL(file.raw)
+  
+  // 聚焦到文本输入框
+  nextTick(() => {
+    messageInput.value?.focus()
+  })
 }
 
-// 移除图片预览
-const removeImagePreview = () => {
-  if (imagePreview.value) {
-    URL.revokeObjectURL(imagePreview.value)
-    imagePreview.value = ''
-    selectedImage.value = null
+// 处理视频选择
+const handleVideoSelect = (file: UploadFile) => {
+  if (!file.raw) {
+    ElMessage.error('文件加载失败')
+    return
   }
+
+  // 验证文件类型
+  const isVideo = file.raw.type.startsWith('video/')
+  if (!isVideo) {
+    ElMessage.error('只能上传视频文件！')
+    return
+  }
+
+  // 验证文件大小（最大30MB，而不是50MB）
+  const isLt30M = file.raw.size / 1024 / 1024 < 30
+  if (!isLt30M) {
+    ElMessage.error('视频大小不能超过 30MB！请压缩后再上传')
+    return
+  }
+
+  // 清除之前选择的媒体
+  removeImagePreview()
+  
+  // 保存选择的视频文件
+  selectedImage.value = file.raw
+  mediaType.value = 'video'
+  
+  // 生成预览（使用Base64编码的占位图）
+  imagePreview.value = videoPlaceholder
+  
+  // 聚焦到文本输入框
+  nextTick(() => {
+    messageInput.value?.focus()
+  })
+}
+
+// 移除媒体预览
+const removeImagePreview = () => {
+  if (imagePreview.value && imagePreview.value.startsWith('blob:')) {
+    URL.revokeObjectURL(imagePreview.value)
+  }
+  imagePreview.value = ''
+  selectedImage.value = null
 }
 
 // 发送消息
@@ -379,9 +456,13 @@ const sendMessage = async () => {
   
   const conversationId = currentConversation.value.id
   
-  // 如果有图片，发送图片消息
+  // 如果有媒体文件，发送媒体消息
   if (selectedImage.value) {
-    await sendImageMessageWithUpload()
+    if (mediaType.value === 'image') {
+      await sendImageMessageWithUpload()
+    } else {
+      await sendVideoMessageWithUpload()
+    }
     return
   }
   
@@ -592,6 +673,134 @@ const sendImageMessageWithUpload = async () => {
   }
 }
 
+// 发送视频消息（包括上传）
+const sendVideoMessageWithUpload = async () => {
+  if (!selectedImage.value || !currentConversation.value) return
+  
+  const conversationId = currentConversation.value.id
+  const videoFile = selectedImage.value
+  
+  // 创建临时消息对象 - 视频消息
+  const tempMessage = createTempMessage(
+    userId.value,
+    conversationId,
+    '',
+    MessageType.VIDEO
+  )
+  
+  // 清空预览
+  removeImagePreview()
+  
+  // 确保消息数组已初始化
+  if (!chatMessages[conversationId]) {
+    chatMessages[conversationId] = []
+  }
+  
+  // 添加临时消息到聊天记录
+  chatMessages[conversationId] = addMessage(chatMessages[conversationId], tempMessage)
+  
+  // 更新最近消息
+  if (currentConversation.value) {
+    currentConversation.value.lastMessage = {...tempMessage}
+  }
+  
+  // 滚动到最新消息
+  nextTick(() => {
+    scrollToBottom()
+  })
+  
+  uploading.value = true
+  
+  // 添加重试逻辑
+  let retryCount = 0;
+  const maxRetries = 3;
+  
+  const attemptUpload = async (): Promise<any> => {
+    try {
+      // 上传视频
+      const res = await upload(videoFile, 'chat-videos')
+      return res;
+    } catch (error: any) {
+      if (retryCount < maxRetries) {
+        retryCount++;
+        console.log(`视频上传失败，正在重试(${retryCount}/${maxRetries})...`);
+        // 等待一段时间再重试
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return attemptUpload();
+      }
+      throw error;
+    }
+  };
+  
+  try {
+    // 使用重试逻辑上传视频
+    const res = await attemptUpload();
+    
+    if (res.code === 0 && res.data) {
+      // 更新临时消息的mediaUrl
+      const updatedIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
+      if (updatedIndex !== -1) {
+        chatMessages[conversationId] = updateMessage(
+          chatMessages[conversationId],
+          updatedIndex,
+          { 
+            mediaUrl: res.data.url,
+            status: MessageStatus.SENT
+          }
+        )
+      }
+      
+      // 发送媒体消息到服务器
+      const response = await sendMediaMessage(
+        conversationId, 
+        userId.value, 
+        res.data.url,
+        MessageType.VIDEO
+      )
+      if (response.code === 0 && response.data) {
+        // 更新临时消息的ID和状态
+        const updatedIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
+        if (updatedIndex !== -1) {
+          chatMessages[conversationId] = updateMessage(
+            chatMessages[conversationId],
+            updatedIndex,
+            { 
+              id: response.data.id,
+              status: MessageStatus.DELIVERED
+            }
+          )
+        }
+        
+        // 更新最近消息
+        if (currentConversation.value) {
+          currentConversation.value.lastMessage = {
+            ...chatMessages[conversationId][updatedIndex]
+          }
+        }
+      } else {
+        throw new Error(response.message || '发送视频消息失败')
+      }
+    } else {
+      throw new Error(res.message || '视频上传失败')
+    }
+  } catch (error: any) {
+    console.error('视频上传或发送失败', error)
+    ElMessage.error(error.message || '视频上传失败，请稍后再试')
+    
+    // 更新临时消息状态为失败
+    const updatedIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
+    if (updatedIndex !== -1) {
+      chatMessages[conversationId] = updateMessage(
+        chatMessages[conversationId],
+        updatedIndex,
+        { status: MessageStatus.FAILED }
+      )
+    }
+  } finally {
+    uploading.value = false
+  }
+}
+
 // 搜索会话
 const searchConversations = () => {
   // 前端直接过滤，由 filteredConversations 计算属性处理
@@ -649,16 +858,26 @@ const scrollToBottom = () => {
 // 注册WebSocket事件
 const registerSocketEvents = () => {
   const socket = getSocket()
-  if (!socket) return
+  if (!socket) {
+    console.error('无法注册WebSocket事件：socket实例不存在')
+    return
+  }
   
-  // 接收新消息 - 监听原有事件
-  socket.on('receive_message', handleNewMessage)
+  console.log('开始注册WebSocket事件监听...')
+  
+  // 移除旧的receive_message事件监听，因为IM系统只有im:message事件
   
   // 接收新消息 - 监听标准im:message事件
-  socket.on('im:message', handleNewMessage)
+  socket.on('im:message', (data) => {
+    console.log('聊天组件收到im:message事件:', data)
+    // 适配消息数据
+    const adaptedData = adaptMessageData(data)
+    handleNewMessage(adaptedData)
+  })
   
   // 对方正在输入
   socket.on('typing', (data) => {
+    console.log('收到typing事件:', data)
     const { conversationId } = data
     
     // 如果当前正在查看该会话，显示正在输入状态
@@ -671,13 +890,74 @@ const registerSocketEvents = () => {
       }, 3000)
     }
   })
+  
+  console.log('WebSocket事件监听已注册')
+}
+
+// 适配不同格式的消息数据
+const adaptMessageData = (data: any) => {
+  console.log('正在适配消息数据格式:', data)
+  
+  // 如果数据本身就是标准格式，直接返回
+  if (data.conversationId && (data.senderId || data.senderId === 0) && (data.content !== undefined || data.messageType)) {
+    return data
+  }
+  
+  // 尝试从不同格式中提取数据
+  const adaptedData: any = {}
+  
+  // 尝试提取会话ID
+  adaptedData.conversationId = data.conversationId || data.conversation_id || data.convId || data.conv_id || 0
+  
+  // 尝试提取发送者ID
+  adaptedData.senderId = data.senderId || data.sender_id || data.uid || data.userId || 0
+  
+  // 尝试提取消息内容
+  adaptedData.content = data.content || data.text || data.message || ''
+  
+  // 尝试提取消息ID
+  adaptedData.messageId = data.messageId || data.message_id || data.id || Date.now()
+  
+  // 尝试提取发送时间
+  adaptedData.sendTime = data.sendTime || data.send_time || data.timestamp || new Date().toISOString()
+  
+  // 尝试提取消息类型
+  adaptedData.messageType = data.messageType || data.message_type || MessageType.TEXT
+  
+  // 处理媒体URL
+  if (data.mediaUrl || data.media_url || data.url) {
+    adaptedData.mediaUrl = data.mediaUrl || data.media_url || data.url
+  }
+  
+  // 处理文件信息
+  if (data.fileName || data.file_name) {
+    adaptedData.fileName = data.fileName || data.file_name
+  }
+  
+  if (data.fileSize || data.file_size) {
+    adaptedData.fileSize = data.fileSize || data.file_size
+  }
+  
+  // 发送者信息
+  adaptedData.senderName = data.senderName || data.sender_name || data.username || ''
+  adaptedData.senderAvatar = data.senderAvatar || data.sender_avatar || data.avatar || ''
+  adaptedData.senderPosition = data.senderPosition || data.sender_position || data.position || ''
+  
+  console.log('适配后的消息数据:', adaptedData)
+  return adaptedData
 }
 
 // 处理新消息的函数
 const handleNewMessage = (data) => {
+  console.log('处理新消息，原始数据:', data)
+  
+  // 提取关键字段
   const { conversationId, senderId, content, messageId, sendTime, messageType = MessageType.TEXT } = data
   
-  console.log('收到新消息:', data)
+  if (!conversationId) {
+    console.error('消息缺少conversationId，无法处理:', data)
+    return
+  }
   
   // 查找对应会话
   let conversation = conversations.value.find(c => c.id === conversationId)
@@ -719,12 +999,15 @@ const handleNewMessage = (data) => {
     newMessage.fileName = data.fileName
     newMessage.fileSize = data.fileSize
     newMessage.mediaUrl = data.mediaUrl
-  } else if (messageType === MessageType.IMAGE && data.mediaUrl) {
+  } else if ((messageType === MessageType.IMAGE || messageType === MessageType.VIDEO) && data.mediaUrl) {
     newMessage.mediaUrl = data.mediaUrl
   }
   
+  console.log('创建的新消息对象:', newMessage)
+  
   // 如果没有该会话的聊天记录，初始化一个
   if (!chatMessages[conversationId]) {
+    console.log('为会话创建新的消息数组:', conversationId)
     chatMessages[conversationId] = []
   }
   
@@ -931,6 +1214,8 @@ const formatLastMessage = (lastMessage: Message | undefined): string => {
       return lastMessage.content || '文本消息';
     case MessageType.IMAGE:
       return '[图片]';
+    case MessageType.VIDEO:
+      return '[视频]';
     case MessageType.FILE:
       return `[文件] ${lastMessage.fileName || ''}`;
     case MessageType.SYSTEM:
@@ -971,7 +1256,7 @@ onBeforeUnmount(() => {
   // 清理工作
   const socket = getSocket()
   if (socket) {
-    socket.off('receive_message')
+    // 移除receive_message的监听器
     socket.off('im:message') // 移除im:message事件监听
     socket.off('typing')
   }
@@ -1175,6 +1460,56 @@ onBeforeUnmount(() => {
   border-top: 1px solid #ebeef5;
 }
 
+.input-container {
+  position: relative;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.input-container:focus-within {
+  border-color: #409eff;
+  box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.2);
+}
+
+.input-container .el-textarea {
+  border: none;
+}
+
+.input-container .el-textarea :deep(.el-textarea__inner) {
+  border: none;
+  resize: none;
+  padding: 10px;
+  box-shadow: none;
+}
+
+.preview-area {
+  padding: 8px;
+  background-color: #f9fafc;
+  border-top: 1px solid #ebeef5;
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.preview-img {
+  max-width: 150px;
+  max-height: 100px;
+  border-radius: 4px;
+  display: block;
+}
+
+.remove-preview {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  opacity: 0.8;
+  transform: scale(0.8);
+}
+
 .input-actions {
   display: flex;
   justify-content: space-between;
@@ -1182,7 +1517,16 @@ onBeforeUnmount(() => {
   margin-top: 10px;
 }
 
+.action-buttons {
+  display: flex;
+  margin-right: 10px;
+}
+
 .upload-image {
+  margin-right: 10px;
+}
+
+.upload-video {
   margin-right: 10px;
 }
 
@@ -1228,30 +1572,14 @@ onBeforeUnmount(() => {
   margin-right: 8px;
 }
 
-.preview-area {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-  padding: 8px;
-  background-color: #f9fafc;
+.message-video {
+  margin-bottom: 4px;
 }
 
-.image-preview {
-  position: relative;
-  display: inline-block;
-}
-
-.preview-img {
-  max-width: 200px;
-  max-height: 150px;
-  border-radius: 4px;
-}
-
-.remove-preview {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  opacity: 0.8;
+.message-video-player {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 8px;
+  background-color: #000;
 }
 </style>

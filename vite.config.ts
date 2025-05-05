@@ -29,7 +29,15 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080', // 这里配置你的后端服务地址
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        configure: (proxy) => {
+          // 监听错误事件以便更好地调试
+          proxy.on('error', (err, req, res) => {
+            console.log('代理错误:', err);
+          });
+        },
+        // 设置超时时间
+        timeout: 600000, // 10分钟
       }
     }
   }
