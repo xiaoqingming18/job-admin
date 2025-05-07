@@ -74,6 +74,15 @@ const router = createRouter({
           }
         },
         {
+          path: 'project-members',
+          name: 'project-members',
+          component: () => import('@/views/dashboard/project-members/index.vue'),
+          meta: {
+            title: '项目成员管理',
+            requiresAuth: true
+          }
+        },
+        {
           path: 'occupations',
           name: 'Occupations',
           component: () => import('@/views/dashboard/occupations/index.vue'),
@@ -274,42 +283,42 @@ router.beforeEach(async (to, from, next) => {
       
       if (!isInit) {
         // 未登录，重定向到登录页
-        next({
-          path: '/login',
-          query: { redirect: to.fullPath }
-        })
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath }
+      })
         return
       }
     }
     
-    // 检查是否是管理员限制的路由
-    if (to.matched.some(record => record.meta.adminOnly)) {
+      // 检查是否是管理员限制的路由
+      if (to.matched.some(record => record.meta.adminOnly)) {
       if (!userStore.isAdmin) {
         ElMessage.error('该页面仅限系统管理员访问')
-        next({ path: '/dashboard' })
-        return
+          next({ path: '/dashboard' })
+          return
+        }
       }
-    }
-    
-    // 检查是否是企业管理员限制的路由
-    if (to.matched.some(record => record.meta.companyAdminOnly)) {
+      
+      // 检查是否是企业管理员限制的路由
+      if (to.matched.some(record => record.meta.companyAdminOnly)) {
       if (!userStore.isCompanyAdmin) {
-        ElMessage.error('该页面仅限企业管理员访问')
-        next({ path: '/dashboard' })
-        return
+          ElMessage.error('该页面仅限企业管理员访问')
+          next({ path: '/dashboard' })
+          return
+        }
       }
-    }
-    
-    // 检查是否是项目经理限制的路由
-    if (to.matched.some(record => record.meta.managerOnly)) {
+      
+      // 检查是否是项目经理限制的路由
+      if (to.matched.some(record => record.meta.managerOnly)) {
       if (!userStore.isProjectManager) {
-        ElMessage.error('该页面仅限项目经理访问')
-        next({ path: '/dashboard' })
-        return
+          ElMessage.error('该页面仅限项目经理访问')
+          next({ path: '/dashboard' })
+          return
+        }
       }
-    }
-    
-    next()
+      
+      next()
   } else {
     next()
   }

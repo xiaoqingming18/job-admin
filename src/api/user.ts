@@ -97,3 +97,29 @@ export const verifyToken = () => {
 export const getUserDetail = (userId: number) => {
   return get(`/user/detail/${userId}`)
 }
+
+/**
+ * 搜索用户
+ * @param query 搜索关键词（用户名、手机号或邮箱）
+ * @returns 用户列表
+ */
+export const searchUsers = (query: string) => {
+  return get('/user/search', { query })
+}
+
+/**
+ * 模糊搜索求职者
+ * @param keyword 搜索关键词（用户名或真实姓名）
+ * @returns 求职者列表
+ */
+export const searchJobseekers = (keyword: string) => {
+  return get<{
+    code: number;
+    data: Array<{
+      id: number;
+      username: string;
+      realName: string | null;
+    }>;
+    message: string;
+  }>('/user/search-jobseekers', { keyword })
+}

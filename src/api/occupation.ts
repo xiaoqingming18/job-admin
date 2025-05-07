@@ -10,7 +10,8 @@ import type {
   Occupation,
   OccupationCategory,
   OccupationListItem,
-  PageResponse
+  PageResponse,
+  OccupationListResponse
 } from '@/types/occupation'
 
 /**
@@ -153,4 +154,20 @@ export const getHotOccupations = (limit?: number) => {
  */
 export const deleteOccupation = (id: number) => {
   return del<CommonResponse<string>>(`/api/occupation/delete/${id}`)
+}
+
+/**
+ * 获取所有工种列表（不分页）
+ * @returns Promise<OccupationListResponse>
+ */
+export function getOccupationList() {
+  return get<OccupationListResponse>('/occupation/list')
+}
+
+/**
+ * 获取所有工种列表（不分页，API路径前缀版本）
+ * @returns Promise<OccupationListResponse>
+ */
+export function getAllOccupations() {
+  return get<OccupationListResponse>('/api/occupation/list')
 }

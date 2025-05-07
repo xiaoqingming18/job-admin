@@ -101,3 +101,12 @@ export function getProjectList(params: ProjectListParams): Promise<ProjectListRe
 export function getManagerProjectList(managerId: number): Promise<ManagerProjectListResponse> {
   return get<ManagerProjectListResponse>(`/project/manager/${managerId}`)
 }
+
+/**
+ * 获取企业下的所有项目列表（直接获取，不带分页参数）
+ * @param companyId 企业ID
+ * @returns Promise
+ */
+export const getCompanyAllProjects = (companyId: number) => {
+  return get<CompanyProjectListResponse>(`/project/company/${companyId}/list`)
+}

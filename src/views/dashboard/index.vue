@@ -54,6 +54,11 @@ const baseMenuItems = [
   },
   {
     icon: 'User',
+    title: '项目成员管理',
+    index: '/dashboard/project-members'
+  },
+  {
+    icon: 'User',
     title: '项目经理管理',
     index: '/dashboard/managers',
     companyAdminOnly: true // 标记为仅企业管理员可见
