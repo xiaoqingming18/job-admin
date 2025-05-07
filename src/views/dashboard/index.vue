@@ -16,13 +16,11 @@ import {
   Calendar,
   ChatDotRound
 } from '@element-plus/icons-vue'
-import { clearUserInfo, isAdmin } from '@/utils/auth'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const isCollapse = ref(false)
-
-// 获取当前用户类型
-const userType = ref(localStorage.getItem('userType') || '')
 
 const toggleSidebar = () => {
   isCollapse.value = !isCollapse.value
@@ -30,8 +28,8 @@ const toggleSidebar = () => {
 
 const handleCommand = (command: string) => {
   if (command === 'logout') {
-    // 使用权限工具处理注销
-    clearUserInfo()
+    // 使用Pinia仓库处理注销
+    userStore.logout()
     router.push('/login')
   }
 }
@@ -129,22 +127,22 @@ const baseMenuItems = [
 
 // 检查菜单项是否有权限显示
 const checkMenuItemPermission = (item: any) => {
-  // 如果菜单项标记为仅管理员可见，则只在用户类型为admin时显示
+  // 如果菜单项标记为仅管理员可见，则只在用户角色为SYSTEM_ADMIN时显示
   if (item.adminOnly) {
-    return isAdmin()
+    return userStore.isAdmin
   }
-  // 如果菜单项标记为仅企业管理员可见，则只在用户类型为company时显示
+  // 如果菜单项标记为仅企业管理员可见，则只在用户角色为COMPANY_ADMIN时显示
   if (item.companyAdminOnly) {
-    return userType.value === 'company'
+    return userStore.isCompanyAdmin
   }
-  // 如果菜单项标记为仅项目经理可见，则只在用户类型为manager时显示
+  // 如果菜单项标记为仅项目经理可见，则只在用户角色为PROJECT_MANAGER时显示
   if (item.managerOnly) {
-    return userType.value === 'manager'
+    return userStore.isProjectManager
   }
   return true
 }
 
-// 根据用户类型过滤菜单项
+// 根据用户角色过滤菜单项
 const menuItems = computed(() => {
   return baseMenuItems.filter(item => checkMenuItemPermission(item))
 })
@@ -218,7 +216,7 @@ const getVisibleChildren = (item: any) => {
         <div class="right-section">
           <el-dropdown @command="handleCommand">
             <span class="user-dropdown-link">
-              管理员 <el-icon><arrow-down /></el-icon>
+              {{ userStore.username }} <el-icon><arrow-down /></el-icon>
             </span>
             <template #dropdown>
               <el-dropdown-menu>

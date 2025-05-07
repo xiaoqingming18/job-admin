@@ -13,6 +13,7 @@ import {
 import { getDashboardDataByRole } from '@/api/dashboard'
 import { isAdmin, isCompanyAdmin, isProjectManager, getUserType } from '@/utils/auth'
 import { getSocket } from '@/utils/socket'
+import UserInfo from '@/components/UserInfo.vue'
 
 const router = useRouter()
 
@@ -358,6 +359,9 @@ onBeforeUnmount(() => {
         <p class="subtitle" v-else-if="isCompanyAdminUser">欢迎使用建筑行业劳务中介管理系统，您可以管理贵公司的项目和人员</p>
         <p class="subtitle" v-else-if="isProjectManagerUser">欢迎使用建筑行业劳务中介管理系统，您可以管理您负责的项目和人员</p>
       </div>
+
+      <!-- 添加用户信息组件 -->
+      <UserInfo />
 
       <!-- 即时通讯入口 - 仅项目经理可见 -->
       <div class="chat-entrance" v-if="isProjectManagerUser">

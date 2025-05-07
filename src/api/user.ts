@@ -89,3 +89,11 @@ export const updateJobseekerPassword = (data: {
 export const verifyToken = () => {
   return get('/user/verify-token')
 }
+
+/**
+ * 获取用户详细信息
+ * @param userId 用户ID
+ */
+export const getUserDetail = (userId: number) => {
+  return get(`/user/detail/${userId}`)
+}

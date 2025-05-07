@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { checkPermission } from '@/utils/auth'
+import { useUserStore } from '@/stores/user'
+import { UserRole } from '@/types/user'
+
+// 暂存用户仓库实例
+let userStore: ReturnType<typeof useUserStore> | null = null
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -108,13 +112,17 @@ const router = createRouter({
             requiresAuth: true
           },
           redirect: to => {
-            // 根据用户类型重定向到不同的劳务需求管理页面
-            const userType = localStorage.getItem('userType')
-            if (userType === 'admin') {
+            // 获取用户仓库实例
+            if (!userStore) {
+              userStore = useUserStore()
+            }
+            
+            // 根据用户角色重定向到不同的劳务需求管理页面
+            if (userStore.isAdmin) {
               return { name: 'labor-demands-admin' }
-            } else if (userType === 'company') {
+            } else if (userStore.isCompanyAdmin) {
               return { name: 'labor-demands-company' }
-            } else if (userType === 'manager') {
+            } else if (userStore.isProjectManager) {
               return { name: 'labor-demands-manager' }
             } else {
               return { name: 'dashboard-home' }
@@ -248,50 +256,60 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   // 设置页面标题
   document.title = to.meta.title ? `${to.meta.title} - 工程项目管理系统` : '工程项目管理系统'
 
+  // 初始化用户仓库
+  if (!userStore) {
+    userStore = useUserStore()
+  }
+
   // 检查是否需要登录权限
   if (to.matched.some(record => record.meta.requiresAuth)) {
-    // 检查是否已登录
-    const token = localStorage.getItem('token')
-    if (!token) {
-      next({
-        path: '/login',
-        query: { redirect: to.fullPath }
-      })
-    } else {
-      // 检查是否是管理员限制的路由
-      if (to.matched.some(record => record.meta.adminOnly)) {
-        if (!checkPermission(true)) {
-          next({ path: '/dashboard' })
-          return
-        }
-      }
+    // 确保用户信息被加载
+    if (!userStore.isLoggedIn) {
+      // 尝试初始化（检查本地存储中的token并加载用户信息）
+      const isInit = await userStore.init()
       
-      // 检查是否是企业管理员限制的路由
-      if (to.matched.some(record => record.meta.companyAdminOnly)) {
-        const userType = localStorage.getItem('userType')
-        if (userType !== 'company') {
-          ElMessage.error('该页面仅限企业管理员访问')
-          next({ path: '/dashboard' })
-          return
-        }
+      if (!isInit) {
+        // 未登录，重定向到登录页
+        next({
+          path: '/login',
+          query: { redirect: to.fullPath }
+        })
+        return
       }
-      
-      // 检查是否是项目经理限制的路由
-      if (to.matched.some(record => record.meta.managerOnly)) {
-        const userType = localStorage.getItem('userType')
-        if (userType !== 'manager') {
-          ElMessage.error('该页面仅限项目经理访问')
-          next({ path: '/dashboard' })
-          return
-        }
-      }
-      
-      next()
     }
+    
+    // 检查是否是管理员限制的路由
+    if (to.matched.some(record => record.meta.adminOnly)) {
+      if (!userStore.isAdmin) {
+        ElMessage.error('该页面仅限系统管理员访问')
+        next({ path: '/dashboard' })
+        return
+      }
+    }
+    
+    // 检查是否是企业管理员限制的路由
+    if (to.matched.some(record => record.meta.companyAdminOnly)) {
+      if (!userStore.isCompanyAdmin) {
+        ElMessage.error('该页面仅限企业管理员访问')
+        next({ path: '/dashboard' })
+        return
+      }
+    }
+    
+    // 检查是否是项目经理限制的路由
+    if (to.matched.some(record => record.meta.managerOnly)) {
+      if (!userStore.isProjectManager) {
+        ElMessage.error('该页面仅限项目经理访问')
+        next({ path: '/dashboard' })
+        return
+      }
+    }
+    
+    next()
   } else {
     next()
   }

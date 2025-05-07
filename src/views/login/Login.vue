@@ -54,40 +54,12 @@ import type { FormInstance } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { adminLogin, companyAdminLogin, projectManagerLogin } from '@/api/user'
 import { useCompanyStore } from '@/stores/company'
-import { isCompanyAdmin, isProjectManager } from '@/utils/auth'
+import { useUserStore } from '@/stores/user'
 import { initSocket } from '@/utils/socket'
 
-/**
- * 从JWT令牌中解析用户ID
- * @param token JWT令牌
- * @returns 用户ID或undefined
- */
-const extractUserIdFromToken = (token: string): number | undefined => {
-  try {
-    // JWT令牌由三部分组成，以点(.)分隔，第二部分是payload
-    const payload = token.split('.')[1];
-    // Base64解码
-    const decodedPayload = atob(payload);
-    // 解析JSON
-    const data = JSON.parse(decodedPayload);
-    // 返回userId
-    return data.userId;
-  } catch (error) {
-    console.error('解析令牌失败:', error);
-    return undefined;
-  }
-};
-
-interface LoginResponse {
-  code: number;
-  data: {
-    token: string;
-    userId?: number;
-  };
-  message: string;
-}
-
 const router = useRouter()
+const userStore = useUserStore()
+const companyStore = useCompanyStore()
 const loginFormRef = ref<FormInstance>()
 const loading = ref(false)
 
@@ -119,7 +91,7 @@ const handleLogin = async () => {
       loading.value = true
       try {
         const { username, password, userType } = loginForm
-        let response: LoginResponse
+        let response
 
         // 根据用户类型调用不同的登录API
         switch (userType) {
@@ -141,29 +113,21 @@ const handleLogin = async () => {
           throw new Error('登录失败：未获取到有效的token')
         }
 
-        // 保存token
-        const token = response.data.token;
-        localStorage.setItem('token', token);
-        // 保存用户类型
-        localStorage.setItem('userType', userType);
-        // 保存用户ID
-        if (response.data.userId) {
-          localStorage.setItem('userId', response.data.userId.toString());
-        } else {
-          // 尝试从令牌中解析userId
-          const userId = extractUserIdFromToken(token);
-          if (userId) {
-            localStorage.setItem('userId', userId.toString());
-          }
+        // 使用Pinia保存token
+        userStore.setToken(response.data.token)
+        
+        // 获取用户信息
+        const success = await userStore.fetchUserInfo()
+        if (!success) {
+          throw new Error('获取用户信息失败')
         }
 
         // 在登录成功后初始化 WebSocket 连接
-        console.log('登录成功，初始化WebSocket连接');
-        initSocket(token);
+        console.log('登录成功，初始化WebSocket连接')
+        initSocket(response.data.token)
 
         // 如果是企业管理员或项目经理，获取企业信息
         if (userType === 'company' || userType === 'manager') {
-          const companyStore = useCompanyStore()
           try {
             await companyStore.fetchCompanyInfo()
           } catch (error) {
