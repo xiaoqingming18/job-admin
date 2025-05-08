@@ -245,6 +245,71 @@ const router = createRouter({
             requiresAuth: true
           }
         },
+        // 考勤管理路由
+        {
+          path: 'attendance',
+          name: 'attendance',
+          meta: {
+            title: '考勤管理',
+            requiresAuth: true
+          },
+          redirect: to => {
+            // 获取用户仓库实例
+            if (!userStore) {
+              userStore = useUserStore()
+            }
+            
+            // 根据用户角色重定向到不同的考勤管理页面
+            if (userStore.isAdmin) {
+              return { name: 'attendance-admin' }
+            } else if (userStore.isCompanyAdmin) {
+              return { name: 'attendance-company' }
+            } else if (userStore.isProjectManager) {
+              return { name: 'attendance-manager' }
+            } else {
+              return { name: 'dashboard-home' }
+            }
+          }
+        },
+        {
+          path: 'attendance/admin',
+          name: 'attendance-admin',
+          component: () => import('@/views/dashboard/attendance/admin.vue'),
+          meta: {
+            title: '考勤管理 - 系统管理员',
+            requiresAuth: true,
+            adminOnly: true
+          }
+        },
+        {
+          path: 'attendance/company',
+          name: 'attendance-company',
+          component: () => import('@/views/dashboard/attendance/company.vue'),
+          meta: {
+            title: '考勤管理 - 企业管理员',
+            requiresAuth: true,
+            companyAdminOnly: true
+          }
+        },
+        {
+          path: 'attendance/manager',
+          name: 'attendance-manager',
+          component: () => import('@/views/dashboard/attendance/manager.vue'),
+          meta: {
+            title: '考勤管理 - 项目经理',
+            requiresAuth: true,
+            managerOnly: true
+          }
+        },
+        {
+          path: 'attendance/:id',
+          name: 'attendance-detail',
+          component: () => import('@/views/dashboard/attendance/detail.vue'),
+          meta: {
+            title: '考勤详情',
+            requiresAuth: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },

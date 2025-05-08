@@ -22,6 +22,14 @@ export interface PageResponse<T> {
 }
 
 /**
+ * 分页结果接口
+ */
+export interface PageResult<T> {
+  total: number
+  list: T[]
+}
+
+/**
  * 通用响应接口
  */
 export interface CommonResponse<T> {

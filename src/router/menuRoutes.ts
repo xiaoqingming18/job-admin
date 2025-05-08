@@ -33,5 +33,12 @@ export default [
       title: '面试管理',
       icon: 'interview'
     }
+  },
+  {
+    path: '/dashboard/attendance',
+    meta: {
+      title: '考勤管理',
+      icon: 'calendar'
+    }
   }
 ] 

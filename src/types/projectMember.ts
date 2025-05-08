@@ -13,6 +13,7 @@ export interface ProjectMember {
   projectName: string;
   userId: number;
   username: string;
+  realName: string | null;
   mobile: string | null;
   jobTypeId: number;
   jobTypeName: string;

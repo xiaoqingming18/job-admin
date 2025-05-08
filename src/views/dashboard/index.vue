@@ -87,6 +87,11 @@ const baseMenuItems = [
     managerOnly: true // 标记为仅项目经理可见
   },
   {
+    icon: 'Calendar',
+    title: '考勤管理',
+    index: '/dashboard/attendance'
+  },
+  {
     icon: 'ChatDotRound',
     title: '即时通讯',
     index: '/dashboard/chat',
