@@ -377,7 +377,7 @@ const getStatusType = (status: string) => {
 const loadCompanies = async () => {
   try {
     const res = await getCompanyList({})
-    companies.value = res.data.list
+    companies.value = res.data.records || res.data.list || []
   } catch (error) {
     console.error('加载企业列表失败:', error)
     ElMessage.error('加载企业列表失败')
@@ -405,7 +405,7 @@ const loadCompanyProjects = async () => {
   
   try {
     const res = await getCompanyAllProjects(queryParams.companyId)
-    projects.value = res.data
+    projects.value = Array.isArray(res.data) ? res.data : (res.data.records || [])
   } catch (error) {
     console.error('加载企业项目列表失败:', error)
     ElMessage.error('加载企业项目列表失败')
@@ -457,7 +457,7 @@ const loadProjectMembers = async () => {
   
   try {
     const res = await getProjectMemberList(queryParams.projectId)
-    projectMembers.value = res.data
+    projectMembers.value = res.data.records || res.data.list || []
   } catch (error) {
     console.error('加载项目成员列表失败:', error)
     ElMessage.error('加载项目成员列表失败')

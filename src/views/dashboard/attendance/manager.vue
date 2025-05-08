@@ -432,7 +432,8 @@ const loadProjects = async () => {
     const res = await getCompanyAllProjects(companyId)
     
     // 项目经理只能看到自己管理的项目
-    projects.value = res.data.filter(
+    const projectList = Array.isArray(res.data) ? res.data : (res.data.records || [])
+    projects.value = projectList.filter(
       project => project.projectManagerId === userStore.userId
     )
     
@@ -519,7 +520,7 @@ const loadProjectMembers = async () => {
   
   try {
     const res = await getProjectMemberList(queryParams.projectId)
-    projectMembers.value = res.data
+    projectMembers.value = res.data.records || res.data.list || []
     console.log('项目成员列表:', projectMembers.value)
   } catch (error) {
     console.error('加载项目成员列表失败:', error)

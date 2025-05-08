@@ -1,5 +1,5 @@
 import { get, post, put } from '@/utils/request'
-import type { PageResult } from '@/types/common'
+import type { PageResult, PageResponse } from '@/types/common'
 import type { 
   AttendanceQueryParams, 
   Attendance, 
@@ -29,7 +29,7 @@ export function checkOut(data: { projectId: number; location?: string; remarks?:
  * @param params 查询参数
  */
 export function getMyAttendanceRecords(params: AttendanceQueryParams) {
-  return get<PageResult<Attendance>>('/api/attendance/my-records', params)
+  return get<PageResponse<Attendance>>('/api/attendance/my-records', params)
 }
 
 /**
@@ -38,7 +38,7 @@ export function getMyAttendanceRecords(params: AttendanceQueryParams) {
  * @param params 查询参数
  */
 export function getProjectAttendanceRecords(projectId: number, params: AttendanceQueryParams) {
-  return get<PageResult<Attendance>>(`/api/attendance/project/${projectId}/records`, params)
+  return get<PageResponse<Attendance>>(`/api/attendance/project/${projectId}/records`, params)
 }
 
 /**

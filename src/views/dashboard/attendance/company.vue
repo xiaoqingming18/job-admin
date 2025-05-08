@@ -423,7 +423,7 @@ const loadProjects = async () => {
     
     const companyId = userStore.userInfo.companyId
     const res = await getCompanyAllProjects(companyId)
-    projects.value = res.data
+    projects.value = Array.isArray(res.data) ? res.data : (res.data.records || [])
   } catch (error) {
     console.error('加载项目列表失败:', error)
     ElMessage.error('加载项目列表失败')
@@ -455,7 +455,7 @@ const loadProjectMembers = async () => {
   
   try {
     const res = await getProjectMemberList(queryParams.projectId)
-    projectMembers.value = res.data
+    projectMembers.value = res.data.records || res.data.list || []
   } catch (error) {
     console.error('加载项目成员列表失败:', error)
     ElMessage.error('加载项目成员列表失败')
