@@ -59,6 +59,14 @@ export function getLeaveApprovalLogs(leaveId: number) {
 }
 
 /**
+ * 获取所有请假审批记录
+ * @param params 查询参数
+ */
+export function getAllLeaveApprovalLogs(params: any) {
+  return get<PageResponse<LeaveApprovalLog>>('/api/leave/approval-logs', params)
+}
+
+/**
  * 获取我的请假列表
  * @param params 查询参数
  */

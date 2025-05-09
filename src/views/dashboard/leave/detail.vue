@@ -5,6 +5,9 @@
         <el-button icon="ArrowLeft" @click="goBack">返回</el-button>
       </div>
       <h2>请假详情</h2>
+      <div class="actions">
+        <el-button type="primary" @click="goToApprovalLogs">所有审批记录</el-button>
+      </div>
     </div>
 
     <el-card v-if="loading" class="loading-card">
@@ -438,6 +441,11 @@ const submitCancel = async () => {
   }
 }
 
+// 跳转到审批记录页面
+const goToApprovalLogs = () => {
+  router.push('/dashboard/leave/approval-logs')
+}
+
 onMounted(() => {
   loadLeaveDetail()
 })
@@ -456,6 +464,10 @@ onMounted(() => {
 
 .back-button {
   margin-right: 20px;
+}
+
+.actions {
+  margin-left: auto;
 }
 
 .info-card,

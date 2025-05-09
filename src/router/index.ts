@@ -385,6 +385,15 @@ const router = createRouter({
             requiresAuth: true
           }
         },
+        {
+          path: 'leave/approval-logs',
+          name: 'leave-approval-logs',
+          component: () => import('@/views/dashboard/leave/approval-logs.vue'),
+          meta: {
+            title: '请假审批记录',
+            requiresAuth: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },

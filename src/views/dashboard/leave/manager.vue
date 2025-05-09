@@ -3,6 +3,9 @@
     <!-- 页面标题 -->
     <div class="page-header">
       <h2>请假管理（项目经理）</h2>
+      <div class="actions">
+        <el-button type="primary" @click="goToApprovalLogs">查看审批记录</el-button>
+      </div>
       <div class="tabs">
         <el-tabs v-model="activeTab">
           <el-tab-pane label="所有请假记录" name="all"></el-tab-pane>
@@ -610,6 +613,11 @@ const submitAddLeave = async () => {
       }
     }
   })
+}
+
+// 跳转到审批记录页面
+const goToApprovalLogs = () => {
+  router.push('/dashboard/leave/approval-logs')
 }
 
 onMounted(() => {
