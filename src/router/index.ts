@@ -247,6 +247,16 @@ const router = createRouter({
         },
         // 考勤管理路由
         {
+          path: 'attendance-menu',
+          name: 'attendance-menu',
+          component: () => import('@/views/dashboard/home/index.vue'), // 使用一个临时组件作为容器
+          meta: {
+            title: '考勤相关',
+            requiresAuth: true
+          },
+          redirect: { name: 'attendance' } // 默认重定向到考勤管理页面
+        },
+        {
           path: 'attendance',
           name: 'attendance',
           meta: {

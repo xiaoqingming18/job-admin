@@ -224,8 +224,8 @@ import { ElMessage } from 'element-plus'
 import { Search, Loading, CircleCheck, CircleClose, Document, Picture, Close, VideoCamera } from '@element-plus/icons-vue'
 import { formatDate, formatTimeAgo } from '@/utils/format'
 import { getSocket } from '@/utils/socket'
-import { getUserConversations, getConversationDetail, createSingleConversation, sendTextMessage, sendImageMessage, sendFileMessage, sendMediaMessage } from '@/api/im'
-import { getUserId } from '@/utils/auth'
+import { getConversationDetail, createSingleConversation, sendTextMessage, sendImageMessage, sendFileMessage, sendMediaMessage, getUserConversations } from '@/api/im'
+import { useUserStore } from '@/stores/user'
 import type { Conversation, Message, ChatMessages, UserInfo } from '@/types/im'
 import { ConversationType, MessageType, MessageStatus } from '@/types/im'
 import { createTempMessage, updateMessage, addMessage, findMessageIndex } from '@/utils/messageHelper'
@@ -241,10 +241,13 @@ const videoPlaceholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACA
 const router = useRouter()
 const route = useRoute()
 
+// 使用用户仓库获取用户信息
+const userStore = useUserStore()
+
 // 当前用户信息
-const userName = ref(localStorage.getItem('userName') || '管理员')
-const userAvatar = ref('')
-const userId = ref(getUserId() || 0)
+const userName = ref(userStore.username || '管理员')
+const userAvatar = ref(userStore.userInfo?.avatar || '')
+const userId = ref(userStore.userId || 0)
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -452,121 +455,113 @@ const removeImagePreview = () => {
 
 // 发送消息
 const sendMessage = async () => {
-  if (!canSendMessage.value || !currentConversation.value) return
+  if (!currentConversation.value) return;
   
-  const conversationId = currentConversation.value.id
+  // 获取当前会话ID
+  const conversationId = currentConversation.value.id;
   
-  // 如果有媒体文件，发送媒体消息
-  if (selectedImage.value) {
-    if (mediaType.value === 'image') {
-      await sendImageMessageWithUpload()
-    } else {
-      await sendVideoMessageWithUpload()
-    }
-    return
+  // 获取当前用户ID（直接从仓库获取，确保最新）
+  const currentUserId = userStore.userId;
+  
+  if (!currentUserId) {
+    ElMessage.error('用户ID无效，请重新登录');
+    return;
   }
   
-  // 否则发送文本消息
-  if (messageContent.value.trim()) {
-    // 创建临时消息对象
-    const tempMessage = createTempMessage(
-      userId.value,
-      conversationId,
-      messageContent.value
-    )
-    
-    // 确保消息数组已初始化
-    if (!chatMessages[conversationId]) {
-      chatMessages[conversationId] = []
-    }
-    
-    // 添加临时消息到聊天记录
-    chatMessages[conversationId] = addMessage(chatMessages[conversationId], tempMessage)
-    
-    console.log('添加消息后长度:', chatMessages[conversationId].length, chatMessages[conversationId])
-    
-    // 更新最近消息
-    if (currentConversation.value) {
-      currentConversation.value.lastMessage = {...tempMessage}
-    }
-    
-    // 滚动到最新消息
-    nextTick(() => {
-      scrollToBottom()
-    })
-    
-    // 清空输入框
-    const messageToSend = messageContent.value
-    messageContent.value = ''
-    
-    try {
-      // 调用API发送消息
+  // 更新本地用户ID（以防有变化）
+  if (userId.value !== currentUserId) {
+    userId.value = currentUserId;
+  }
+  
+  // 文本内容和媒体文件至少需要有一个
+  if (!messageContent.value.trim() && !selectedImage.value) {
+    return;
+  }
+  
+  try {
+    // 如果有选择的媒体文件，先上传
+    if (selectedImage.value) {
+      // 根据媒体类型调用对应的上传函数
+      if (mediaType.value === 'image') {
+        await sendImageMessageWithUpload();
+      } else if (mediaType.value === 'video') {
+        await sendVideoMessageWithUpload();
+      }
+    } else if (messageContent.value.trim()) {
+      // 创建临时消息对象
+      const tempMessage = createTempMessage(
+        conversationId,
+        currentUserId,
+        messageContent.value.trim(),
+        MessageType.TEXT
+      );
+      
+      // 添加到当前会话的消息列表
+      if (!chatMessages[conversationId]) {
+        chatMessages[conversationId] = [];
+      }
+      
+      chatMessages[conversationId] = addMessage(chatMessages[conversationId], tempMessage);
+      
+      // 立即滚动到底部
+      nextTick(() => {
+        scrollToBottom();
+      });
+      
+      // 向服务器发送消息
       const response = await sendTextMessage(
         conversationId,
-        userId.value,
-        messageToSend
-      )
+        currentUserId,
+        messageContent.value.trim()
+      );
       
-      console.log('发送消息响应:', response)
-      
+      // 如果发送成功，更新消息状态
       if (response.code === 0 && response.data) {
-        // 找到临时消息的索引
-        const messageIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
-        
-        console.log('找到临时消息索引:', messageIndex)
+        // 查找临时消息的索引
+        const messageIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id);
         
         if (messageIndex !== -1) {
-          // 使用服务器返回的数据更新临时消息
-          const serverMessage = response.data
-          
-          // 通过工具函数更新消息，确保响应式
+          // 使用工具函数更新消息，确保响应式更新
           chatMessages[conversationId] = updateMessage(
             chatMessages[conversationId],
             messageIndex,
             {
-              ...serverMessage,
+              ...response.data,
               isSelf: true,
               status: MessageStatus.SENT
             }
-          )
+          );
           
-          console.log('更新后的消息:', chatMessages[conversationId][messageIndex])
-          
-          // 更新最近消息
-          if (currentConversation.value) {
-            currentConversation.value.lastMessage = {...chatMessages[conversationId][messageIndex]}
-          }
+          // 更新当前会话的最后一条消息
+          currentConversation.value.lastMessage = {...chatMessages[conversationId][messageIndex]};
         }
       } else {
-        throw new Error(response.message || '发送消息失败')
-      }
-    } catch (error) {
-      console.error('发送消息失败:', error)
-      ElMessage.error('发送消息失败，请重试')
-      
-      // 将消息状态更新为发送失败
-      const messageIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id)
-      
-      if (messageIndex !== -1) {
-        // 使用工具函数更新消息状态
-        chatMessages[conversationId] = updateMessage(
-          chatMessages[conversationId],
-          messageIndex,
-          { status: MessageStatus.FAILED }
-        )
-      }
-      
-      // 获取Socket实例尝试通过Socket发送
-      const socket = getSocket()
-      if (socket) {
-        socket.emit('send_message', {
-          conversationId,
-          content: messageToSend
-        })
+        // 发送失败，标记消息状态为失败
+        const messageIndex = findMessageIndex(chatMessages[conversationId], tempMessage.id);
+        if (messageIndex !== -1) {
+          chatMessages[conversationId] = updateMessage(
+            chatMessages[conversationId],
+            messageIndex,
+            { status: MessageStatus.FAILED }
+          );
+        }
+        
+        throw new Error(response.message || '发送消息失败');
       }
     }
+    
+    // 清空输入框
+    messageContent.value = '';
+    
+    // 清除媒体预览
+    if (selectedImage.value) {
+      removeImagePreview();
+    }
+  } catch (error) {
+    console.error('发送消息失败:', error);
+    ElMessage.error('发送消息失败');
   }
-}
+};
 
 // 发送图片消息（包括上传）
 const sendImageMessageWithUpload = async () => {
@@ -1096,15 +1091,21 @@ watch(() => route.query, async (query) => {
 
 // 加载用户会话列表
 const loadConversations = async () => {
-  if (!userId.value) {
-    ElMessage.error('无法获取用户ID')
-    return
+  // 直接从用户仓库获取用户ID
+  const currentUserId = userStore.userId;
+  
+  if (!currentUserId) {
+    ElMessage.error('无法获取用户ID，请重新登录');
+    return;
   }
   
-  loading.value = true
+  // 更新本地用户ID（以防有变化）
+  userId.value = currentUserId;
+  
+  loading.value = true;
   try {
     // 从API获取会话列表
-    const response = await getUserConversations(userId.value)
+    const response = await getUserConversations(currentUserId);
     if (response.code === 0 && Array.isArray(response.data)) {
       // 确保每个会话对象都有默认值，避免空对象
       conversations.value = response.data.map(conversation => ({
@@ -1120,18 +1121,18 @@ const loadConversations = async () => {
       
       // 如果有会话，默认选择第一个
       if (conversations.value.length > 0 && !currentConversation.value && !route.query.applicantId) {
-        selectConversation(conversations.value[0])
+        selectConversation(conversations.value[0]);
       }
     } else {
-      ElMessage.error(response.message || '获取会话列表失败')
+      ElMessage.error(response.message || '获取会话列表失败');
     }
   } catch (error) {
-    console.error('加载会话列表失败:', error)
-    ElMessage.error('加载会话列表失败')
+    console.error('加载会话列表失败:', error);
+    ElMessage.error('加载会话列表失败');
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // 重发消息
 const resendMessage = async (message: Message) => {
@@ -1261,6 +1262,15 @@ onBeforeUnmount(() => {
     socket.off('typing')
   }
 })
+
+// 监听用户信息变化
+watch(() => userStore.userId, (newUserId, oldUserId) => {
+  if (newUserId && newUserId !== oldUserId) {
+    console.log('用户ID已更新，重新加载会话列表:', newUserId);
+    userId.value = newUserId;
+    loadConversations();
+  }
+});
 </script>
 
 <style scoped>

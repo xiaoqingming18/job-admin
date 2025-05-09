@@ -88,8 +88,18 @@ const baseMenuItems = [
   },
   {
     icon: 'Calendar',
-    title: '考勤管理',
-    index: '/dashboard/attendance'
+    title: '考勤相关',
+    index: '/dashboard/attendance-menu',
+    children: [
+      {
+        title: '考勤管理',
+        index: '/dashboard/attendance'
+      },
+      {
+        title: '请假管理',
+        index: '/dashboard/leave'
+      }
+    ]
   },
   {
     icon: 'ChatDotRound',
@@ -257,9 +267,10 @@ const getVisibleChildren = (item: any) => {
 .sidebar {
   width: 220px;
   height: 100%;
-  background-color: #304156;
+  background-color: #ffffff;
   transition: width 0.3s;
   overflow-y: auto;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .dashboard-container.is-collapsed .sidebar {
@@ -271,31 +282,50 @@ const getVisibleChildren = (item: any) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  background-color: #263445;
+  color: #1a5cff;
+  background-color: #ffffff;
+  border-bottom: 1px solid #f0f2f5;
 }
 
 .logo-container h2 {
   margin: 0;
   font-size: 18px;
+  font-weight: 600;
 }
 
 .sidebar-menu {
   border-right: none;
-  background-color: #304156;
+  background-color: #ffffff;
 }
 
 .sidebar-menu :deep(.el-menu-item) {
-  color: #bfcbd9;
+  color: #606266;
+  height: 50px;
+  line-height: 50px;
+}
+
+.sidebar-menu :deep(.el-sub-menu__title) {
+  color: #303133;
+  height: 50px;
+  line-height: 50px;
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active) {
-  color: #409EFF;
-  background-color: #263445;
+  color: #1a5cff;
+  background-color: #e6f0ff;
+  border-right: 3px solid #1a5cff;
 }
 
 .sidebar-menu :deep(.el-menu-item:hover) {
-  background-color: #263445;
+  background-color: #f5f7fa;
+}
+
+.sidebar-menu :deep(.el-sub-menu__title:hover) {
+  background-color: #f5f7fa;
+}
+
+.sidebar-menu :deep(.el-sub-menu.is-active .el-sub-menu__title) {
+  color: #1a5cff;
 }
 
 .main-container {

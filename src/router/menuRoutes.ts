@@ -37,8 +37,24 @@ export default [
   {
     path: '/dashboard/attendance',
     meta: {
-      title: '考勤管理',
+      title: '考勤相关',
       icon: 'calendar'
-    }
+    },
+    children: [
+      {
+        path: '/dashboard/attendance',
+        meta: {
+          title: '考勤管理',
+          icon: 'calendar'
+        }
+      },
+      {
+        path: '/dashboard/leave',
+        meta: {
+          title: '请假管理',
+          icon: 'document'
+        }
+      }
+    ]
   }
 ] 
