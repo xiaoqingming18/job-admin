@@ -455,7 +455,7 @@ const loadProjectMembers = async () => {
   
   try {
     const res = await getProjectMemberList(queryParams.projectId)
-    projectMembers.value = res.data.records || res.data.list || []
+    projectMembers.value = Array.isArray(res.data) ? res.data : (res.data || [])
   } catch (error) {
     console.error('加载项目成员列表失败:', error)
     ElMessage.error('加载项目成员列表失败')

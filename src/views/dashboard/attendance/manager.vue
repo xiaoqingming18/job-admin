@@ -520,7 +520,8 @@ const loadProjectMembers = async () => {
   
   try {
     const res = await getProjectMemberList(queryParams.projectId)
-    projectMembers.value = res.data.records || res.data.list || []
+    // 直接将结果赋值给projectMembers，因为API返回的是数组而不是分页结果
+    projectMembers.value = Array.isArray(res.data) ? res.data : (res.data || [])
     console.log('项目成员列表:', projectMembers.value)
   } catch (error) {
     console.error('加载项目成员列表失败:', error)
