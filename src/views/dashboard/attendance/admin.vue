@@ -191,6 +191,34 @@
       </div>
     </el-card>
     
+    <!-- 项目考勤设置卡片，当选择了项目时显示 -->
+    <el-card v-if="queryParams.projectId" class="setting-card">
+      <template #header>
+        <div class="card-header">
+          <span>考勤时间与加班费设置</span>
+          <el-button type="primary" size="small" @click="handleOpenAttendanceSetting">
+            {{ attendanceSetting ? '修改设置' : '设置考勤时间' }}
+          </el-button>
+        </div>
+      </template>
+      
+      <div v-if="attendanceSetting" class="setting-content">
+        <div class="setting-item">
+          <div class="label">考勤开始时间:</div>
+          <div class="value">{{ attendanceSetting.checkInTime || '未设置' }}</div>
+        </div>
+        <div class="setting-item">
+          <div class="label">考勤结束时间:</div>
+          <div class="value">{{ attendanceSetting.checkOutTime || '未设置' }}</div>
+        </div>
+        <div class="setting-item">
+          <div class="label">加班费率(元/小时):</div>
+          <div class="value">{{ attendanceSetting.overtimePayRate || '0.00' }}</div>
+        </div>
+      </div>
+      <el-empty v-else description="暂未设置考勤时间" />
+    </el-card>
+    
     <!-- 编辑考勤对话框 -->
     <el-dialog
       v-model="editDialogVisible"
@@ -238,6 +266,49 @@
         </span>
       </template>
     </el-dialog>
+    
+    <!-- 考勤设置对话框 -->
+    <el-dialog
+      v-model="attendanceSettingDialogVisible"
+      :title="attendanceSetting ? '修改考勤设置' : '设置考勤时间'"
+      width="500px"
+    >
+      <el-form :model="attendanceSettingForm" label-width="120px" :rules="settingRules" ref="settingFormRef">
+        <el-form-item label="考勤开始时间" prop="checkInTime">
+          <el-time-picker 
+            v-model="attendanceSettingForm.checkInTime"
+            format="HH:mm"
+            value-format="HH:mm"
+            placeholder="选择考勤开始时间"
+            :clearable="false"
+          />
+        </el-form-item>
+        <el-form-item label="考勤结束时间" prop="checkOutTime">
+          <el-time-picker 
+            v-model="attendanceSettingForm.checkOutTime"
+            format="HH:mm"
+            value-format="HH:mm"
+            placeholder="选择考勤结束时间"
+            :clearable="false"
+          />
+        </el-form-item>
+        <el-form-item label="加班费(元/小时)" prop="overtimePayRate">
+          <el-input-number 
+            v-model="attendanceSettingForm.overtimePayRate" 
+            :min="0" 
+            :precision="2" 
+            :step="0.5" 
+            style="width: 160px;"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="attendanceSettingDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleAttendanceSettingSubmit">确认</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -245,14 +316,15 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCompanyList } from '@/api/company'
-import { getCompanyAllProjects } from '@/api/project'
+import { getCompanyAllProjects, getProjectAttendanceSetting, setProjectAttendanceSetting } from '@/api/project'
 import { getProjectAttendanceRecords, getProjectAttendanceStatistics, updateAttendance, exportAttendance } from '@/api/attendance'
 import { getProjectMemberList } from '@/api/projectMember'
-import type { Project } from '@/types/project'
+import type { Project, ProjectAttendanceSetting } from '@/types/project'
 import type { Company } from '@/types/company'
 import type { ProjectMember } from '@/types/projectMember'
 import type { MemberAttendanceDetail, Attendance, ProjectAttendanceStatistics, UpdateAttendanceRequest, AttendanceQueryParams } from '@/types/attendance'
 import { AttendanceStatus, AttendanceStatusDesc } from '@/types/attendance'
+import type { FormInstance, FormRules } from 'element-plus'
 
 // 考勤状态选项
 const attendanceStatusOptions = AttendanceStatusDesc
@@ -342,6 +414,28 @@ const editForm = reactive<UpdateAttendanceRequest & { id?: number }>({
 })
 const currentRecord = ref<Attendance | null>(null)
 
+// 项目考勤设置相关
+const attendanceSetting = ref<ProjectAttendanceSetting | null>(null)
+const attendanceSettingDialogVisible = ref(false)
+const attendanceSettingForm = reactive({
+  projectId: 0,
+  checkInTime: '',
+  checkOutTime: '',
+  overtimePayRate: 0
+})
+const settingFormRef = ref<FormInstance>()
+const settingRules = reactive<FormRules>({
+  checkInTime: [
+    { required: true, message: '请选择考勤开始时间', trigger: 'change' }
+  ],
+  checkOutTime: [
+    { required: true, message: '请选择考勤结束时间', trigger: 'change' }
+  ],
+  overtimePayRate: [
+    { type: 'number', min: 0, message: '加班费不能为负数', trigger: 'blur' }
+  ]
+})
+
 // 监听日期范围变化
 watch(dateRange, (newValue) => {
   if (newValue) {
@@ -423,11 +517,14 @@ const handleProjectChange = async () => {
     await loadProjectStatistics()
     // 加载考勤记录
     await loadAttendanceRecords()
+    // 加载项目考勤设置
+    await loadProjectAttendanceSetting()
   } else {
     // 清空成员列表和统计数据
     members.value = []
     projectMembers.value = []
     statistics.value = null
+    attendanceSetting.value = null
   }
 }
 
@@ -611,6 +708,80 @@ const handleExport = async () => {
   }
 }
 
+// 加载项目考勤设置
+const loadProjectAttendanceSetting = async () => {
+  if (!queryParams.projectId) return
+  
+  try {
+    const res = await getProjectAttendanceSetting(queryParams.projectId)
+    attendanceSetting.value = res.data
+  } catch (error) {
+    console.error('加载项目考勤设置失败:', error)
+    ElMessage.error('加载项目考勤设置失败')
+  }
+}
+
+// 打开考勤设置对话框
+const handleOpenAttendanceSetting = () => {
+  if (!queryParams.projectId) {
+    ElMessage.warning('请先选择项目')
+    return
+  }
+  
+  // 如果有已存在的设置，填充表单
+  if (attendanceSetting.value) {
+    attendanceSettingForm.checkInTime = attendanceSetting.value.checkInTime || ''
+    attendanceSettingForm.checkOutTime = attendanceSetting.value.checkOutTime || ''
+    attendanceSettingForm.overtimePayRate = attendanceSetting.value.overtimePayRate || 0
+  } else {
+    // 否则清空表单
+    attendanceSettingForm.checkInTime = ''
+    attendanceSettingForm.checkOutTime = ''
+    attendanceSettingForm.overtimePayRate = 0
+  }
+  
+  attendanceSettingForm.projectId = queryParams.projectId
+  attendanceSettingDialogVisible.value = true
+}
+
+// 提交考勤设置
+const handleAttendanceSettingSubmit = async () => {
+  if (!settingFormRef.value) return
+  
+  await settingFormRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        // 确保时间格式为HH:mm
+        const checkInTime = attendanceSettingForm.checkInTime ? 
+          attendanceSettingForm.checkInTime.substring(0, 5) : '';
+        const checkOutTime = attendanceSettingForm.checkOutTime ? 
+          attendanceSettingForm.checkOutTime.substring(0, 5) : '';
+          
+        // 检查格式是否符合要求
+        const timeRegex = /^([01]?\d|2[0-3]):[0-5]\d$/;
+        if (!timeRegex.test(checkInTime) || !timeRegex.test(checkOutTime)) {
+          ElMessage.error('时间格式不正确，应为HH:mm格式，例如：09:00');
+          return;
+        }
+        
+        const res = await setProjectAttendanceSetting({
+          projectId: attendanceSettingForm.projectId,
+          checkInTime: checkInTime,
+          checkOutTime: checkOutTime,
+          overtimePayRate: attendanceSettingForm.overtimePayRate
+        })
+        
+        ElMessage.success('项目考勤设置更新成功')
+        attendanceSetting.value = res.data
+        attendanceSettingDialogVisible.value = false
+      } catch (error) {
+        console.error('更新项目考勤设置失败:', error)
+        ElMessage.error('更新项目考勤设置失败')
+      }
+    }
+  })
+}
+
 // 组件挂载时加载数据
 onMounted(() => {
   loadCompanies()
@@ -664,5 +835,32 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-top: 20px;
+}
+
+.setting-card {
+  margin-top: 20px;
+}
+
+.setting-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.setting-item {
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+}
+
+.setting-item .label {
+  font-weight: bold;
+  margin-right: 10px;
+  color: #606266;
+}
+
+.setting-item .value {
+  font-size: 16px;
+  color: #303133;
 }
 </style> 

@@ -80,4 +80,21 @@ export interface ManagerProjectListResponse {
   code: number
   data: Project[]
   message: string
+}
+
+// 项目考勤设置接口
+export interface ProjectAttendanceSetting {
+  projectId: number
+  projectName: string
+  checkInTime: string | null
+  checkOutTime: string | null
+  overtimePayRate: number | null
+}
+
+// 项目考勤设置请求接口
+export interface ProjectAttendanceSettingRequest {
+  projectId: number
+  checkInTime: string
+  checkOutTime: string
+  overtimePayRate?: number
 } 

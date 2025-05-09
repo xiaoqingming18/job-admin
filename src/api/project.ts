@@ -110,3 +110,26 @@ export function getManagerProjectList(managerId: number): Promise<ManagerProject
 export const getCompanyAllProjects = (companyId: number) => {
   return get<CompanyProjectListResponse>(`/project/company/${companyId}/list`)
 }
+
+/**
+ * 获取项目考勤设置
+ * @param projectId 项目ID
+ * @returns Promise<项目考勤设置>
+ */
+export function getProjectAttendanceSetting(projectId: number) {
+  return get(`/api/project/attendance/setting/${projectId}`)
+}
+
+/**
+ * 设置项目考勤时间和加班费
+ * @param data 考勤设置数据
+ * @returns Promise<设置后的考勤信息>
+ */
+export function setProjectAttendanceSetting(data: {
+  projectId: number
+  checkInTime: string
+  checkOutTime: string
+  overtimePayRate?: number
+}) {
+  return post('/api/project/attendance/setting', data)
+}
