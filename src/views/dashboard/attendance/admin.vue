@@ -5,6 +5,9 @@
       <template #header>
         <div class="card-header">
           <span>考勤管理</span>
+          <div>
+            <el-button type="info" @click="goToLeaveManagement">请假管理</el-button>
+          </div>
         </div>
       </template>
       
@@ -325,6 +328,9 @@ import type { ProjectMember } from '@/types/projectMember'
 import type { MemberAttendanceDetail, Attendance, ProjectAttendanceStatistics, UpdateAttendanceRequest, AttendanceQueryParams } from '@/types/attendance'
 import { AttendanceStatus, AttendanceStatusDesc } from '@/types/attendance'
 import type { FormInstance, FormRules } from 'element-plus'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 // 考勤状态选项
 const attendanceStatusOptions = AttendanceStatusDesc
@@ -780,6 +786,11 @@ const handleAttendanceSettingSubmit = async () => {
       }
     }
   })
+}
+
+// 跳转到请假管理页面
+const goToLeaveManagement = () => {
+  router.push('/dashboard/leave/admin')
 }
 
 // 组件挂载时加载数据

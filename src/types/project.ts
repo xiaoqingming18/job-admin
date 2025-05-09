@@ -80,7 +80,7 @@ export interface ManagerProjectListResponse {
   code: number
   data: Project[]
   message: string
-}
+} 
 
 // 项目考勤设置接口
 export interface ProjectAttendanceSetting {

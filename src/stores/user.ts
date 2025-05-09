@@ -20,6 +20,9 @@ export const useUserStore = defineStore('user', () => {
   const username = computed(() => userInfo.value?.username)
   const userRole = computed(() => userInfo.value?.role)
   
+  // 添加user属性作为userInfo的别名，确保向后兼容
+  const user = computed(() => userInfo.value)
+  
   // Actions
   /**
    * 保存Token到LocalStorage和状态管理
@@ -163,6 +166,7 @@ export const useUserStore = defineStore('user', () => {
     userId,
     username,
     userRole,
+    user,
     
     // Actions
     setToken,

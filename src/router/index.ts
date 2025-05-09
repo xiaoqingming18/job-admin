@@ -310,6 +310,71 @@ const router = createRouter({
             requiresAuth: true
           }
         },
+        // 请假管理路由
+        {
+          path: 'leave',
+          name: 'leave',
+          meta: {
+            title: '请假管理',
+            requiresAuth: true
+          },
+          redirect: to => {
+            // 获取用户仓库实例
+            if (!userStore) {
+              userStore = useUserStore()
+            }
+            
+            // 根据用户角色重定向到不同的请假管理页面
+            if (userStore.isAdmin) {
+              return { name: 'leave-admin' }
+            } else if (userStore.isCompanyAdmin) {
+              return { name: 'leave-company' }
+            } else if (userStore.isProjectManager) {
+              return { name: 'leave-manager' }
+            } else {
+              return { name: 'dashboard-home' }
+            }
+          }
+        },
+        {
+          path: 'leave/admin',
+          name: 'leave-admin',
+          component: () => import('@/views/dashboard/leave/admin.vue'),
+          meta: {
+            title: '请假管理 - 系统管理员',
+            requiresAuth: true,
+            adminOnly: true
+          }
+        },
+        {
+          path: 'leave/company',
+          name: 'leave-company',
+          component: () => import('@/views/dashboard/leave/company.vue'),
+          meta: {
+            title: '请假管理 - 企业管理员',
+            requiresAuth: true,
+            companyAdminOnly: true
+          }
+        },
+        {
+          path: 'leave/manager',
+          name: 'leave-manager',
+          component: () => import('@/views/dashboard/leave/manager.vue'),
+          meta: {
+            title: '请假管理 - 项目经理',
+            requiresAuth: true,
+            managerOnly: true
+          }
+        },
+        {
+          path: 'leave/:id',
+          name: 'leave-detail',
+          component: () => import('@/views/dashboard/leave/detail.vue'),
+          meta: {
+            title: '请假详情',
+            requiresAuth: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },

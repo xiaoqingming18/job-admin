@@ -8,6 +8,7 @@
           <div>
             <el-button type="primary" @click="handleImport">批量导入</el-button>
             <el-button type="success" @click="handleExport">导出考勤</el-button>
+            <el-button type="info" @click="goToLeaveManagement">请假管理</el-button>
           </div>
         </div>
       </template>
@@ -365,6 +366,7 @@ import type { ProjectMember } from '@/types/projectMember'
 import type { MemberAttendanceDetail, Attendance, ProjectAttendanceStatistics, UpdateAttendanceRequest, AttendanceQueryParams } from '@/types/attendance'
 import { AttendanceStatus, AttendanceStatusDesc } from '@/types/attendance'
 import type { FormInstance, FormRules } from 'element-plus'
+import { useRouter } from 'vue-router'
 
 // 用户权限相关
 const userStore = useUserStore()
@@ -856,7 +858,13 @@ const handleAttendanceSettingSubmit = async () => {
   })
 }
 
+// 跳转到请假管理页面
+const goToLeaveManagement = () => {
+  router.push('/dashboard/leave/manager')
+}
+
 // 组件挂载时加载数据
+const router = useRouter()
 onMounted(() => {
   loadProjects()
 })

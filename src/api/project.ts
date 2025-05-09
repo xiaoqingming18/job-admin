@@ -76,12 +76,23 @@ export const deleteProject = (id: number) => {
 
 /**
  * 获取企业项目列表
- * @param params 查询参数
+ * @param companyId 企业ID或查询参数
+ * @param pageParams 可选的分页参数
  * @returns Promise<CompanyProjectListResponse>
  */
-export function getCompanyProjectList(params: CompanyProjectListParams): Promise<CompanyProjectListResponse> {
-  const { companyId, pageNum, pageSize } = params
-  return get<CompanyProjectListResponse>(`/project/company/${companyId}/list`, { pageNum, pageSize })
+export function getCompanyProjectList(
+  companyId: number | CompanyProjectListParams, 
+  pageParams?: { pageNum?: number; pageSize?: number }
+): Promise<CompanyProjectListResponse> {
+  // 如果传入的是数字，则为企业ID
+  if (typeof companyId === 'number') {
+    return get<CompanyProjectListResponse>(`/project/company/${companyId}/list`, pageParams)
+  } 
+  // 如果传入的是对象，则为查询参数
+  else {
+    const { companyId: id, pageNum, pageSize } = companyId
+    return get<CompanyProjectListResponse>(`/project/company/${id}/list`, { pageNum, pageSize })
+  }
 }
 
 /**
