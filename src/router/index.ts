@@ -394,6 +394,137 @@ const router = createRouter({
             requiresAuth: true
           }
         },
+        // 考勤统计路由
+        {
+          path: 'attendance-statistics',
+          name: 'attendance-statistics',
+          meta: {
+            title: '考勤统计',
+            requiresAuth: true
+          },
+          redirect: to => {
+            // 获取用户仓库实例
+            if (!userStore) {
+              userStore = useUserStore()
+            }
+            
+            // 根据用户角色重定向到不同的考勤统计页面
+            if (userStore.isAdmin) {
+              return { name: 'attendance-statistics-admin' }
+            } else if (userStore.isCompanyAdmin) {
+              return { name: 'attendance-statistics-company' }
+            } else if (userStore.isProjectManager) {
+              return { name: 'attendance-statistics-manager' }
+            } else {
+              return { name: 'dashboard-home' }
+            }
+          }
+        },
+        {
+          path: 'attendance-statistics/admin',
+          name: 'attendance-statistics-admin',
+          component: () => import('@/views/dashboard/attendance-statistics/admin.vue'),
+          meta: {
+            title: '考勤统计 - 系统管理员',
+            requiresAuth: true,
+            adminOnly: true
+          }
+        },
+        {
+          path: 'attendance-statistics/company',
+          name: 'attendance-statistics-company',
+          component: () => import('@/views/dashboard/attendance-statistics/company.vue'),
+          meta: {
+            title: '考勤统计 - 企业管理员',
+            requiresAuth: true,
+            companyAdminOnly: true
+          }
+        },
+        {
+          path: 'attendance-statistics/manager',
+          name: 'attendance-statistics-manager',
+          component: () => import('@/views/dashboard/attendance-statistics/manager.vue'),
+          meta: {
+            title: '考勤统计 - 项目经理',
+            requiresAuth: true,
+            managerOnly: true
+          }
+        },
+        // 项目成员评估模块路由
+        {
+          path: 'performance-menu',
+          name: 'performance-menu',
+          component: () => import('@/views/dashboard/home/index.vue'), // 使用一个临时组件作为容器
+          meta: {
+            title: '评估管理',
+            requiresAuth: true
+          },
+          redirect: { name: 'performance' } // 默认重定向到绩效评估页面
+        },
+        {
+          path: 'performance',
+          name: 'performance',
+          meta: {
+            title: '绩效评估',
+            requiresAuth: true
+          },
+          redirect: to => {
+            // 获取用户仓库实例
+            if (!userStore) {
+              userStore = useUserStore()
+            }
+            
+            // 根据用户角色重定向到不同的绩效评估页面
+            if (userStore.isAdmin) {
+              return { name: 'performance-admin' }
+            } else if (userStore.isCompanyAdmin) {
+              return { name: 'performance-company' }
+            } else if (userStore.isProjectManager) {
+              return { name: 'performance-manager' }
+            } else {
+              return { name: 'dashboard-home' }
+            }
+          }
+        },
+        {
+          path: 'performance/admin',
+          name: 'performance-admin',
+          component: () => import('@/views/dashboard/performance/admin.vue'),
+          meta: {
+            title: '绩效评估 - 系统管理员',
+            requiresAuth: true,
+            adminOnly: true
+          }
+        },
+        {
+          path: 'performance/company',
+          name: 'performance-company',
+          component: () => import('@/views/dashboard/performance/company.vue'),
+          meta: {
+            title: '绩效评估 - 企业管理员',
+            requiresAuth: true,
+            companyAdminOnly: true
+          }
+        },
+        {
+          path: 'performance/manager',
+          name: 'performance-manager',
+          component: () => import('@/views/dashboard/performance/manager.vue'),
+          meta: {
+            title: '绩效评估 - 项目经理',
+            requiresAuth: true,
+            managerOnly: true
+          }
+        },
+        {
+          path: 'performance/:id',
+          name: 'performance-detail',
+          component: () => import('@/views/dashboard/performance/detail.vue'),
+          meta: {
+            title: '绩效评估详情',
+            requiresAuth: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },

@@ -14,7 +14,8 @@ import {
   Tools,
   Document,
   Calendar,
-  ChatDotRound
+  ChatDotRound,
+  Star
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 
@@ -98,6 +99,21 @@ const baseMenuItems = [
       {
         title: '请假管理',
         index: '/dashboard/leave'
+      },
+      {
+        title: '考勤统计',
+        index: '/dashboard/attendance-statistics'
+      }
+    ]
+  },
+  {
+    icon: 'Star',
+    title: '评估管理',
+    index: '/dashboard/performance-menu',
+    children: [
+      {
+        title: '绩效评估',
+        index: '/dashboard/performance'
       }
     ]
   },

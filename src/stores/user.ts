@@ -88,9 +88,14 @@ export const useUserStore = defineStore('user', () => {
       try {
         const detailResponse = await getUserDetail(basicInfo.userId)
         if (detailResponse && detailResponse.data) {
+          // 兼容性处理：服务器返回id，前端使用userId
+          const serverUserId = detailResponse.data.id;
+          
           // 合并基本信息和详细信息
           userInfo.value = {
             ...basicInfo,
+            // 如果服务器返回id，使用id值更新userId
+            userId: serverUserId || basicInfo.userId,
             email: detailResponse.data.email,
             mobile: detailResponse.data.mobile,
             avatar: detailResponse.data.avatar,
@@ -101,6 +106,11 @@ export const useUserStore = defineStore('user', () => {
             companyId: detailResponse.data.companyId,
             companyName: detailResponse.data.companyName,
             position: detailResponse.data.position
+          }
+          
+          // 为了兼容性，也设置一个id字段
+          if (userInfo.value && serverUserId) {
+            (userInfo.value as any).id = serverUserId;
           }
         } else {
           // 只使用基本信息

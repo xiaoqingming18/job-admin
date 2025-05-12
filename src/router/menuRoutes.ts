@@ -54,6 +54,29 @@ export default [
           title: '请假管理',
           icon: 'document'
         }
+      },
+      {
+        path: '/dashboard/attendance-statistics',
+        meta: {
+          title: '考勤统计',
+          icon: 'data-analysis'
+        }
+      }
+    ]
+  },
+  {
+    path: '/dashboard/performance',
+    meta: {
+      title: '评估管理',
+      icon: 'star'
+    },
+    children: [
+      {
+        path: '/dashboard/performance',
+        meta: {
+          title: '绩效评估',
+          icon: 'star'
+        }
       }
     ]
   }

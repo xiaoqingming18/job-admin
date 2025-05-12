@@ -320,7 +320,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCompanyList } from '@/api/company'
 import { getCompanyAllProjects, getProjectAttendanceSetting, setProjectAttendanceSetting } from '@/api/project'
-import { getProjectAttendanceRecords, getProjectAttendanceStatistics, updateAttendance, exportAttendance } from '@/api/attendance'
+import { getProjectAttendanceRecords, getProjectAttendanceStatistics, updateAttendance, exportAttendanceStatistics } from '@/api/attendance'
 import { getProjectMemberList } from '@/api/projectMember'
 import type { Project, ProjectAttendanceSetting } from '@/types/project'
 import type { Company } from '@/types/company'
@@ -560,7 +560,7 @@ const loadProjectMembers = async () => {
   
   try {
     const res = await getProjectMemberList(queryParams.projectId)
-    projectMembers.value = Array.isArray(res.data) ? res.data : (res.data || [])
+    projectMembers.value = res.data || []
   } catch (error) {
     console.error('加载项目成员列表失败:', error)
     ElMessage.error('加载项目成员列表失败')
@@ -687,13 +687,12 @@ const handleExport = async () => {
   
   try {
     const params = {
-      projectId: queryParams.projectId,
       startDate: queryParams.startDate,
       endDate: queryParams.endDate,
       memberId: queryParams.memberId
     }
     
-    const response = await exportAttendance(params)
+    const response = await exportAttendanceStatistics(queryParams.projectId, params)
     
     // 创建下载链接
     const blob = new Blob([response.data])

@@ -354,7 +354,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { getCompanyAllProjects, getProjectAttendanceSetting, setProjectAttendanceSetting } from '@/api/project'
-import { getProjectAttendanceRecords, getProjectAttendanceStatistics, updateAttendance, batchImportAttendance, exportAttendance } from '@/api/attendance'
+import { getProjectAttendanceRecords, getProjectAttendanceStatistics, updateAttendance, batchImportAttendance, exportAttendanceStatistics } from '@/api/attendance'
 import { getProjectMemberList } from '@/api/projectMember'
 import type { Project, ProjectAttendanceSetting } from '@/types/project'
 import type { ProjectMember } from '@/types/projectMember'
@@ -556,7 +556,7 @@ const loadProjectMembers = async () => {
   
   try {
     const res = await getProjectMemberList(queryParams.projectId)
-    projectMembers.value = Array.isArray(res.data) ? res.data : (res.data || [])
+    projectMembers.value = res.data || []
   } catch (error) {
     console.error('加载项目成员列表失败:', error)
     ElMessage.error('加载项目成员列表失败')
@@ -740,13 +740,12 @@ const handleExport = async () => {
   
   try {
     const params = {
-      projectId: queryParams.projectId,
       startDate: queryParams.startDate,
       endDate: queryParams.endDate,
       memberId: queryParams.memberId
     }
     
-    const response = await exportAttendance(params)
+    const response = await exportAttendanceStatistics(queryParams.projectId, params)
     
     // 创建下载链接
     const blob = new Blob([response.data])

@@ -65,13 +65,17 @@ export function getMyAttendanceStatistics(params: {
 /**
  * 获取项目考勤统计
  * @param projectId 项目ID
- * @param params 统计参数
+ * @param params 查询参数
  */
 export function getProjectAttendanceStatistics(
-  projectId: number, 
-  params: { startDate?: string; endDate?: string; memberId?: number }
+  projectId: number | string,
+  params: {
+    startDate?: string;
+    endDate?: string;
+    memberId?: number | string;
+  }
 ) {
-  return get<ProjectAttendanceStatistics>(`/api/attendance/statistics/project/${projectId}`, params)
+  return get<any>(`/api/attendance/statistics/project/${projectId}`, params);
 }
 
 /**
@@ -92,16 +96,27 @@ export function batchImportAttendance(projectId: number, file: File) {
 }
 
 /**
- * 导出考勤记录 (返回Blob)
+ * 导出考勤统计数据
+ * @param projectId 项目ID
  * @param params 导出参数
  */
-export function exportAttendance(params: { 
-  projectId: number; 
-  startDate: string; 
-  endDate: string; 
-  memberId?: number 
-}) {
-  return get<Blob>('/api/attendance/export', params, {
-    responseType: 'blob'
-  })
+export function exportAttendanceStatistics(
+  projectId: number | string,
+  params: {
+    startDate: string;
+    endDate: string;
+    memberId?: number | string;
+  }
+) {
+  // 直接使用window.open导出文件
+  const url = new URL(`${import.meta.env.VITE_API_BASE_URL}/api/attendance/export`);
+  url.searchParams.append('projectId', projectId.toString());
+  url.searchParams.append('startDate', params.startDate);
+  url.searchParams.append('endDate', params.endDate);
+  if (params.memberId) {
+    url.searchParams.append('memberId', params.memberId.toString());
+  }
+  
+  window.open(url.toString(), '_blank');
+  return Promise.resolve();
 } 

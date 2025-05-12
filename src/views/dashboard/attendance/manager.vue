@@ -359,7 +359,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { getCompanyAllProjects, getProjectAttendanceSetting, setProjectAttendanceSetting } from '@/api/project'
-import { getProjectAttendanceRecords, getProjectAttendanceStatistics, updateAttendance, batchImportAttendance, exportAttendance } from '@/api/attendance'
+import { getProjectAttendanceRecords, getProjectAttendanceStatistics, updateAttendance, batchImportAttendance, exportAttendanceStatistics } from '@/api/attendance'
 import { getProjectMemberList } from '@/api/projectMember'
 import type { Project, ProjectAttendanceSetting } from '@/types/project'
 import type { ProjectMember } from '@/types/projectMember'
@@ -619,8 +619,7 @@ const loadProjectMembers = async () => {
   
   try {
     const res = await getProjectMemberList(queryParams.projectId)
-    // 直接将结果赋值给projectMembers，因为API返回的是数组而不是分页结果
-    projectMembers.value = Array.isArray(res.data) ? res.data : (res.data || [])
+    projectMembers.value = res.data || []
     console.log('项目成员列表:', projectMembers.value)
   } catch (error) {
     console.error('加载项目成员列表失败:', error)
@@ -757,13 +756,12 @@ const handleExport = async () => {
   
   try {
     const params = {
-      projectId: queryParams.projectId,
       startDate: queryParams.startDate,
       endDate: queryParams.endDate,
       memberId: queryParams.memberId
     }
     
-    const response = await exportAttendance(params)
+    const response = await exportAttendanceStatistics(queryParams.projectId, params)
     
     // 创建下载链接
     const blob = new Blob([response.data])
