@@ -525,6 +525,81 @@ const router = createRouter({
             requiresAuth: true
           }
         },
+        // 工资管理路由
+        {
+          path: 'salary-menu',
+          name: 'salary-menu',
+          component: () => import('@/views/dashboard/home/index.vue'), // 使用一个临时组件作为容器
+          meta: {
+            title: '工资管理',
+            requiresAuth: true
+          },
+          redirect: { name: 'salary' } // 默认重定向到工资管理页面
+        },
+        {
+          path: 'salary',
+          name: 'salary',
+          meta: {
+            title: '工资管理',
+            requiresAuth: true
+          },
+          redirect: to => {
+            // 获取用户仓库实例
+            if (!userStore) {
+              userStore = useUserStore()
+            }
+            
+            // 根据用户角色重定向到不同的工资管理页面
+            if (userStore.isAdmin) {
+              return { name: 'salary-admin' }
+            } else if (userStore.isCompanyAdmin) {
+              return { name: 'salary-company' }
+            } else if (userStore.isProjectManager) {
+              return { name: 'salary-manager' }
+            } else {
+              return { name: 'dashboard-home' }
+            }
+          }
+        },
+        {
+          path: 'salary/admin',
+          name: 'salary-admin',
+          component: () => import('@/views/dashboard/salary/index.vue'),
+          meta: {
+            title: '工资管理 - 系统管理员',
+            requiresAuth: true,
+            adminOnly: true
+          }
+        },
+        {
+          path: 'salary/company',
+          name: 'salary-company',
+          component: () => import('@/views/dashboard/salary/index.vue'),
+          meta: {
+            title: '工资管理 - 企业管理员',
+            requiresAuth: true,
+            companyAdminOnly: true
+          }
+        },
+        {
+          path: 'salary/manager',
+          name: 'salary-manager',
+          component: () => import('@/views/dashboard/salary/index.vue'),
+          meta: {
+            title: '工资管理 - 项目经理',
+            requiresAuth: true,
+            managerOnly: true
+          }
+        },
+        {
+          path: 'salary/detail/:id',
+          name: 'salary-detail',
+          component: () => import('@/views/dashboard/salary/detail.vue'),
+          meta: {
+            title: '工资详情',
+            requiresAuth: true
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },

@@ -103,6 +103,10 @@ const baseMenuItems = [
       {
         title: '考勤统计',
         index: '/dashboard/attendance-statistics'
+      },
+      {
+        title: '工资管理',
+        index: '/dashboard/salary-menu'
       }
     ]
   },

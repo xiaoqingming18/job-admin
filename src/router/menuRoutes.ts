@@ -61,6 +61,13 @@ export default [
           title: '考勤统计',
           icon: 'data-analysis'
         }
+      },
+      {
+        path: '/dashboard/salary',
+        meta: {
+          title: '工资管理',
+          icon: 'money'
+        }
       }
     ]
   },
