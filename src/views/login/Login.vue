@@ -116,10 +116,18 @@ const handleLogin = async () => {
         // 使用Pinia保存token
         userStore.setToken(response.data.token)
         
+        // 保存用户类型到localStorage
+        localStorage.setItem('userType', userType)
+        
         // 获取用户信息
         const success = await userStore.fetchUserInfo()
         if (!success) {
           throw new Error('获取用户信息失败')
+        }
+
+        // 获取到用户ID后保存到localStorage
+        if (userStore.userId) {
+          localStorage.setItem('userId', userStore.userId.toString())
         }
 
         // 在登录成功后初始化 WebSocket 连接

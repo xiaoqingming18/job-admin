@@ -357,7 +357,6 @@ import {
 } from '@/api/laborDemand'
 import { getManagerProjectList } from '@/api/project'
 import { getOccupationPage } from '@/api/occupation'
-import { getUserId } from '@/utils/auth'
 import type { 
   LaborDemand, 
   LaborDemandListItem, 
@@ -367,6 +366,11 @@ import type {
   LaborDemandListItemNew,
   LaborDemandPageQueryParams
 } from '@/types/labor'
+import { useUserStore } from '@/stores/user'
+import { useRouter } from 'vue-router'
+
+// 用户信息和权限
+const userStore = useUserStore()
 
 // 格式化货币
 const formatCurrency = (value: number) => {
@@ -527,10 +531,13 @@ const formatDateString = (dateStr: string): string => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const managerId = getUserId()
+    const router = useRouter()
+    const managerId = userStore.userId
     
     if (!managerId) {
-      throw new Error('无法获取用户信息')
+      ElMessage.error('无法获取用户信息，请重新登录')
+      router.push('/login')
+      return
     }
     
     // 获取项目经理管理的项目列表
@@ -666,10 +673,13 @@ const fetchData = async () => {
 const fetchInProgressData = async () => {
   inProgressLoading.value = true
   try {
-    const managerId = getUserId()
+    const router = useRouter()
+    const managerId = userStore.userId
     
     if (!managerId) {
-      throw new Error('无法获取用户信息')
+      ElMessage.error('无法获取用户信息，请重新登录')
+      router.push('/login')
+      return
     }
     
     // 获取项目经理管理的项目列表
@@ -678,38 +688,40 @@ const fetchInProgressData = async () => {
     if (projectRes.code === 0 && projectRes.data) {
       const projectIds = projectRes.data.map(project => project.id)
       
-      // 获取所有进行中的需求
+      // 按照项目分批次获取并合并结果
       const allResults: LaborDemandListItemNew[] = []
       
       for (const projectId of projectIds) {
         try {
-          // 使用新API获取项目的劳务需求
           const res = await getLaborDemandsByProject(projectId)
           if (res.code === 0 && res.data) {
-            // 筛选状态为open的需求
-            const openDemands = res.data.filter(item => item.status === 'open')
-            allResults.push(...openDemands)
+            allResults.push(...res.data)
           }
         } catch (error) {
           console.error(`获取项目${projectId}劳务需求失败`, error)
         }
       }
       
-      // 格式化为旧格式的数据以便兼容
-      inProgressData.value = allResults.map(item => ({
+      // 仅保留状态为"进行中"的需求
+      const inProgressDemands = allResults.filter(item => item.status === 'open')
+      
+      // 转换为内部数据格式
+      inProgressData.value = inProgressDemands.map(item => ({
         id: item.id,
+        title: item.title,
         projectId: item.projectId,
         projectName: item.projectName,
-        companyId: 0, // 不需要公司ID
-        companyName: item.companyName || '',
-        title: item.projectName, // 使用项目名称作为标题
         occupationId: item.jobTypeId,
         occupationName: item.jobTypeName,
-        requiredCount: item.headcount,
+        occupationCategoryId: null,
+        occupationCategoryName: null,
+        requiredCount: item.count,
+        dailyWage: item.salary,
+        totalBudget: item.count * item.salary * calculateWorkDays(item.startDate, item.endDate),
         startDate: formatDateString(item.startDate),
         endDate: formatDateString(item.endDate),
-        dailyWage: item.dailyWage,
-        status: typeof item.status === 'string' ? item.status : mapLegacyToNewStatus(item.status as LaborDemandStatus),
+        status: item.status,
+        requirements: item.requirements,
         createTime: formatDateString(item.createTime)
       }))
     } else {
@@ -739,13 +751,7 @@ const occupationOptions = ref<{ id: number; name: string }[]>([])
 // 获取项目经理管理的项目列表
 const fetchProjectList = async () => {
   try {
-    const managerId = getUserId()
-    
-    if (!managerId) {
-      throw new Error('无法获取用户信息')
-    }
-    
-    const res = await getManagerProjectList(managerId)
+    const res = await getManagerProjectList(userStore.userId)
     
     if (res.code === 0 && res.data) {
       projectOptions.value = res.data.map(item => ({
@@ -977,18 +983,25 @@ const submitForm = async () => {
   })
 }
 
-// 发布劳务需求
-const handleSubmit = async (row: LaborDemandListItem | LaborDemand) => {
+// 提交劳务需求
+const handleSubmit = async (row: LaborDemandListItem) => {
   try {
-    // 直接更新状态为open，无需审核
-    await changeLaborDemandStatus({ 
-      id: row.id, 
-      status: 'open' 
+    // 更新状态
+    const res = await changeLaborDemandStatus({
+      id: row.id,
+      status: 'open' // 更新为开放状态
     })
-    ElMessage.success('劳务需求已发布')
-    refreshData()
+    
+    if (res.code === 0) {
+      ElMessage.success('劳务需求已成功发布')
+      // 刷新数据
+      fetchData()
+    } else {
+      throw new Error(res.message || '发布失败')
+    }
   } catch (error: any) {
-    ElMessage.error(error.message || '发布失败，请稍后再试')
+    console.error('发布劳务需求失败', error)
+    ElMessage.error(error.message || '发布劳务需求失败，请稍后再试')
   }
 }
 
@@ -1060,8 +1073,28 @@ const handleCurrentChange = (newPage: number) => {
   fetchData()
 }
 
+// 获取当前用户ID
+const getUserId = () => {
+  return userStore.userId
+}
+
+// 获取用户角色
+const isProjectManagerRole = () => {
+  // 优先使用store中的角色信息，如果不存在则使用localStorage的用户类型
+  return userStore.isProjectManager || localStorage.getItem('userType') === 'manager'
+}
+
 // 初始化
 onMounted(async () => {
+  const router = useRouter()
+  
+  // 检查是否是项目经理角色
+  if (!isProjectManagerRole()) {
+    ElMessage.error('只有项目经理才能访问此页面')
+    router.push('/dashboard')
+    return
+  }
+  
   // 加载下拉选项数据
   await fetchProjectList()
   await fetchOccupationList()

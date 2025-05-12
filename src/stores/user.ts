@@ -16,7 +16,7 @@ export const useUserStore = defineStore('user', () => {
   const isCompanyAdmin = computed(() => userInfo.value?.role === UserRole.COMPANY_ADMIN)
   const isProjectManager = computed(() => userInfo.value?.role === UserRole.PROJECT_MANAGER)
   const isJobSeeker = computed(() => userInfo.value?.role === UserRole.JOB_SEEKER)
-  const userId = computed(() => userInfo.value?.userId)
+  const userId = computed(() => userInfo.value?.userId || (userInfo.value as any)?.id)
   const username = computed(() => userInfo.value?.username)
   const userRole = computed(() => userInfo.value?.role)
   
@@ -51,6 +51,8 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null
     token.value = null
     localStorage.removeItem('token')
+    localStorage.removeItem('userType')
+    localStorage.removeItem('userId')
   }
 
   /**
@@ -112,6 +114,15 @@ export const useUserStore = defineStore('user', () => {
           if (userInfo.value && serverUserId) {
             (userInfo.value as any).id = serverUserId;
           }
+          
+          // 确保用户ID也保存到localStorage
+          if (userInfo.value?.userId) {
+            localStorage.setItem('userId', userInfo.value.userId.toString());
+          }
+          
+          // 打印用户信息，帮助调试
+          console.log("用户信息已更新:", userInfo.value);
+          console.log("当前用户ID:", userId.value);
         } else {
           // 只使用基本信息
           userInfo.value = {

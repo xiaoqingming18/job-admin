@@ -282,11 +282,12 @@ import {
 } from '@element-plus/icons-vue'
 import { getProjectList, updateProject, deleteProject, addProject, getCompanyProjectList, getManagerProjectList } from '@/api/project'
 import { getCompanyList, getCompanyManagerList } from '@/api/company'
-import { isAdmin, isCompanyAdmin, isProjectManager, getUserId } from '@/utils/auth'
 import { useCompanyStore } from '@/stores/company'
 import { regionData, codeToText } from 'element-china-area-data'
 import type { Project, ProjectStatus } from '@/types/project'
 import type { ProjectManager } from '@/types/company'
+import { useUserStore } from '@/stores/user'
+import { useRouter } from 'vue-router'
 
 // 格式化日期
 const formatDate = (dateStr: string) => {
@@ -395,6 +396,26 @@ const searchForm = reactive({
   projectType: ''
 })
 
+// 检查用户角色
+const userStore = useUserStore()
+
+const isAdmin = () => {
+  return userStore.isAdmin || localStorage.getItem('userType') === 'admin'
+}
+
+const isCompanyAdmin = () => {
+  return userStore.isCompanyAdmin || localStorage.getItem('userType') === 'company'
+}
+
+const isProjectManager = () => {
+  return userStore.isProjectManager || localStorage.getItem('userType') === 'manager'
+}
+
+// 获取当前用户ID
+const getUserId = () => {
+  return userStore.userId
+}
+
 // 重置搜索条件
 const resetSearch = () => {
   searchForm.name = ''
@@ -414,12 +435,15 @@ const fetchData = async () => {
   loading.value = true
   try {
     const companyStore = useCompanyStore()
+    const router = useRouter()
 
     if (isProjectManager()) {
       // 项目经理只能查看自己管理的项目
       const managerId = getUserId()
       if (!managerId) {
-        throw new Error('无法获取用户信息，请重新登录')
+        ElMessage.error('无法获取用户信息，请重新登录')
+        router.push('/login')
+        return
       }
       
       const res = await getManagerProjectList(managerId)
