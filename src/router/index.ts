@@ -237,6 +237,16 @@ const router = createRouter({
           }
         },
         {
+          path: 'certificates',
+          name: 'certificates',
+          component: () => import('@/views/dashboard/certificates/index.vue'),
+          meta: {
+            title: '证书管理',
+            requiresAuth: true,
+            adminOnly: true
+          }
+        },
+        {
           path: 'chat',
           name: 'chat',
           component: () => import('@/views/dashboard/chat/index.vue'),

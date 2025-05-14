@@ -71,6 +71,12 @@ const baseMenuItems = [
     adminOnly: true // 标记为仅管理员可见
   },
   {
+    icon: 'Star',
+    title: '证书管理',
+    index: '/dashboard/certificates',
+    adminOnly: true // 标记为仅管理员可见
+  },
+  {
     icon: 'Suitcase',
     title: '劳务需求管理',
     index: '/dashboard/labor-demands'
