@@ -69,5 +69,5 @@ export function getCertificateVerificationDetail(id: string | number) {
  * 审核证书
  */
 export function verifyCertificate(id: string | number, data: any) {
-  return request.post(`/api/admin/certificate-verifications/${id}`, data)
+  return request.put(`/api/admin/certificate-verifications/${id}/verify`, data)
 } 
