@@ -610,6 +610,17 @@ const router = createRouter({
             requiresAuth: true
           }
         },
+        // 添加用户管理路由
+        {
+          path: '/dashboard/users',
+          component: () => import('@/views/dashboard/users/index.vue'),
+          name: 'UserManagement',
+          meta: {
+            title: '用户管理',
+            icon: 'user',
+            roles: ['system_admin']
+          }
+        },
         // 其他子路由可以在这里添加
       ]
     },

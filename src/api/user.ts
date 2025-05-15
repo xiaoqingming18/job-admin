@@ -123,3 +123,27 @@ export const searchJobseekers = (keyword: string) => {
     message: string;
   }>('/user/search-jobseekers', { keyword })
 }
+
+/**
+ * 系统管理员查询用户列表
+ * @param params 查询参数
+ * @returns 用户列表分页结果
+ */
+export const pageUserList = (params: {
+  keyword?: string;
+  role?: string;
+  accountStatus?: string;
+  pageNum: number;
+  pageSize: number;
+}) => {
+  return post('/admin/user/list', params)
+}
+
+/**
+ * 系统管理员获取用户详情
+ * @param id 用户ID
+ * @returns 用户详情
+ */
+export const getAdminUserDetail = (id: number) => {
+  return get(`/admin/user/detail/${id}`)
+}

@@ -35,6 +35,14 @@ export default [
     }
   },
   {
+    path: '/dashboard/users',
+    meta: {
+      title: '用户管理',
+      icon: 'user',
+      role: 'system_admin'
+    }
+  },
+  {
     path: '/dashboard/attendance',
     meta: {
       title: '考勤相关',

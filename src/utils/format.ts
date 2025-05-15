@@ -91,4 +91,17 @@ export const formatTimeAgo = (date: Date | string | number): string => {
   } else {
     return formatDate(date, 'YYYY-MM-DD')
   }
+}
+
+/**
+ * 格式化手机号
+ * @param mobile 手机号
+ * @returns 格式化后的手机号，如 138****1234
+ */
+export const formatMobile = (mobile: string): string => {
+  if (!mobile || mobile.length !== 11) {
+    return mobile || ''
+  }
+  
+  return `${mobile.substring(0, 3)}****${mobile.substring(7)}`
 } 
