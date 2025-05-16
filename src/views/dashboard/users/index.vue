@@ -36,7 +36,6 @@
           <el-select v-model="searchForm.accountStatus" placeholder="请选择状态" clearable>
             <el-option label="启用" value="enabled" />
             <el-option label="禁用" value="disabled" />
-            <el-option label="待审核" value="pending" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -369,10 +368,10 @@ const getRoleLabel = (role: UserRole) => {
 }
 
 const getStatusLabel = (status: AccountStatus) => {
-  const statusMap: Record<AccountStatus, string> = {
+  const statusMap: Record<string, string> = {
     [AccountStatus.ENABLED]: '已启用',
     [AccountStatus.DISABLED]: '已禁用',
-    [AccountStatus.PENDING]: '待审核'
+    'pending': '已启用'  // pending 状态显示为已启用
   }
   return statusMap[status] || status
 }
@@ -388,10 +387,10 @@ const getRoleTagType = (role: UserRole) => {
 }
 
 const getStatusTagType = (status: AccountStatus) => {
-  const statusTagMap: Record<AccountStatus, string> = {
+  const statusTagMap: Record<string, string> = {
     [AccountStatus.ENABLED]: 'success',
     [AccountStatus.DISABLED]: 'danger',
-    [AccountStatus.PENDING]: 'warning'
+    'pending': 'success'  // pending 状态使用与已启用相同的样式
   }
   return statusTagMap[status] || ''
 }

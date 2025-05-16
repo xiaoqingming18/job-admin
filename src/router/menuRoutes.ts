@@ -1,5 +1,13 @@
 export default [
   {
+    path: '/dashboard/companies',
+    meta: {
+      title: '企业管理',
+      icon: 'office-building',
+      role: 'system_admin'
+    }
+  },
+  {
     path: '/dashboard/occupations',
     meta: {
       title: '工种管理',

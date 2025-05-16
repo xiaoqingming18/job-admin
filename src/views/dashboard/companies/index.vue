@@ -25,6 +25,17 @@
         <el-form-item label="法定代表人">
           <el-input v-model="searchForm.legalPerson" placeholder="请输入法定代表人" clearable />
         </el-form-item>
+        <el-form-item label="企业状态">
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+            <el-option label="正常" :value="CompanyStatus.ACTIVE" />
+            <el-option label="已禁用" :value="CompanyStatus.INACTIVE" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="行业">
+          <el-select v-model="searchForm.industry" placeholder="请选择行业" clearable>
+            <el-option v-for="item in industryOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
             <el-icon><Search /></el-icon>搜索
@@ -51,19 +62,35 @@
         <el-table-column prop="name" label="企业名称" min-width="180" show-overflow-tooltip />
         <el-table-column prop="licenseNumber" label="营业执照号" min-width="200" show-overflow-tooltip />
         <el-table-column prop="legalPerson" label="法定代表人" width="120" align="center" />
+        <el-table-column prop="industry" label="所属行业" width="120" align="center" show-overflow-tooltip />
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="scope">
+            <el-tag :type="scope.row.status === CompanyStatus.ACTIVE ? 'success' : 'danger'">
+              {{ scope.row.status === CompanyStatus.ACTIVE ? '正常' : '已禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="address" label="企业地址" min-width="240" show-overflow-tooltip />
         <el-table-column label="创建时间" width="180" align="center">
           <template #default="scope">
             {{ formatDate(scope.row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" width="200" align="center">
+        <el-table-column label="操作" fixed="right" width="280" align="center">
           <template #default="scope">
             <el-button link type="primary" @click.stop="handleEdit(scope.row)">
               <el-icon><Edit /></el-icon>编辑
             </el-button>
             <el-button link type="primary" @click.stop="handleDetail(scope.row)">
               <el-icon><View /></el-icon>详情
+            </el-button>
+            <el-button 
+              link 
+              :type="scope.row.status === CompanyStatus.ACTIVE ? 'danger' : 'success'"
+              @click.stop="handleToggleStatus(scope.row)"
+            >
+              <el-icon><component :is="scope.row.status === CompanyStatus.ACTIVE ? 'CircleClose' : 'CircleCheck'" /></el-icon>
+              {{ scope.row.status === CompanyStatus.ACTIVE ? '禁用' : '启用' }}
             </el-button>
             <el-button link type="danger" @click.stop="handleDelete(scope.row)">
               <el-icon><Delete /></el-icon>删除
@@ -90,7 +117,7 @@
     <el-drawer
       v-model="drawerVisible"
       title="企业详情"
-      size="30%"
+      size="40%"
       :destroy-on-close="true"
     >
       <div v-if="currentCompany" class="company-details">
@@ -99,11 +126,33 @@
           <el-descriptions-item label="营业执照号">{{ currentCompany.licenseNumber }}</el-descriptions-item>
           <el-descriptions-item label="法定代表人">{{ currentCompany.legalPerson }}</el-descriptions-item>
           <el-descriptions-item label="企业地址">{{ currentCompany.address }}</el-descriptions-item>
+          <el-descriptions-item label="所属行业">{{ currentCompany.industry }}</el-descriptions-item>
+          <el-descriptions-item label="企业规模">{{ currentCompany.size }}</el-descriptions-item>
+          <el-descriptions-item label="企业网站">{{ currentCompany.website || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="联系人">{{ currentCompany.contactPerson }}</el-descriptions-item>
+          <el-descriptions-item label="联系电话">{{ currentCompany.contactPhone }}</el-descriptions-item>
+          <el-descriptions-item label="电子邮箱">{{ currentCompany.email }}</el-descriptions-item>
+          <el-descriptions-item label="企业状态">
+            <el-tag :type="currentCompany.status === CompanyStatus.ACTIVE ? 'success' : 'danger'">
+              {{ currentCompany.status === CompanyStatus.ACTIVE ? '正常' : '已禁用' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="管理员">{{ currentCompany.adminUsername }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ formatDate(currentCompany.createTime) }}</el-descriptions-item>
+          <el-descriptions-item label="更新时间">{{ formatDate(currentCompany.updateTime) }}</el-descriptions-item>
+          <el-descriptions-item label="企业描述">
+            <div class="company-description">{{ currentCompany.description || '-' }}</div>
+          </el-descriptions-item>
         </el-descriptions>
 
         <div class="drawer-footer">
           <el-button type="primary" @click="handleEdit(currentCompany)">编辑信息</el-button>
+          <el-button 
+            :type="currentCompany.status === CompanyStatus.ACTIVE ? 'danger' : 'success'"
+            @click="handleToggleStatus(currentCompany)"
+          >
+            {{ currentCompany.status === CompanyStatus.ACTIVE ? '禁用企业' : '启用企业' }}
+          </el-button>
           <el-button @click="drawerVisible = false">关闭</el-button>
         </div>
       </div>
@@ -135,6 +184,36 @@
         <el-form-item label="法定代表人" prop="legalPerson">
           <el-input v-model="form.legalPerson" placeholder="请输入法定代表人" />
         </el-form-item>
+        <el-form-item label="所属行业" prop="industry">
+          <el-select v-model="form.industry" placeholder="请选择行业">
+            <el-option v-for="item in industryOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="企业规模" prop="size">
+          <el-select v-model="form.size" placeholder="请选择企业规模">
+            <el-option label="1-49人" value="1-49" />
+            <el-option label="50-199人" value="50-199" />
+            <el-option label="200-499人" value="200-499" />
+            <el-option label="500-999人" value="500-999" />
+            <el-option label="1000-9999人" value="1000-9999" />
+            <el-option label="10000人以上" value="10000+" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="联系人" prop="contactPerson">
+          <el-input v-model="form.contactPerson" placeholder="请输入联系人" />
+        </el-form-item>
+        <el-form-item label="联系电话" prop="contactPhone">
+          <el-input v-model="form.contactPhone" placeholder="请输入联系电话" />
+        </el-form-item>
+        <el-form-item label="电子邮箱" prop="email">
+          <el-input v-model="form.email" placeholder="请输入电子邮箱" />
+        </el-form-item>
+        <el-form-item label="企业网站" prop="website">
+          <el-input v-model="form.website" placeholder="请输入企业网站" />
+        </el-form-item>
+        <el-form-item label="企业描述" prop="description">
+          <el-input v-model="form.description" type="textarea" :rows="4" placeholder="请输入企业描述" />
+        </el-form-item>
         <el-form-item label="管理员用户名" prop="username" v-if="!isEdit">
           <el-input v-model="form.username" placeholder="请输入管理员用户名" />
         </el-form-item>
@@ -144,10 +223,7 @@
         <el-form-item label="确认密码" prop="confirmPassword" v-if="!isEdit">
           <el-input v-model="form.confirmPassword" placeholder="请再次输入密码" type="password" />
         </el-form-item>
-        <el-form-item label="电子邮箱" prop="email" v-if="!isEdit">
-          <el-input v-model="form.email" placeholder="请输入电子邮箱" />
-        </el-form-item>
-        <el-form-item label="职位" prop="position" v-if="!isEdit">
+        <el-form-item label="管理员职位" prop="position" v-if="!isEdit">
           <el-input v-model="form.position" placeholder="请输入职位" />
         </el-form-item>
       </el-form>
@@ -172,9 +248,23 @@ import {
   Delete,
   Search,
   Refresh,
-  View
+  View,
+  CircleCheck,
+  CircleClose
 } from '@element-plus/icons-vue'
-import { getCompanyList, updateCompany, deleteCompany, registerCompany } from '@/api/company'
+import { getCompanyList, updateCompany, deleteCompany, registerCompany, getAdminCompanyList, getAdminCompanyDetail, updateCompanyStatus } from '@/api/company'
+import { CompanyStatus } from '@/types/company'
+
+// 行业选项
+const industryOptions = [
+  { value: 'construction', label: '建筑/工程' },
+  { value: 'manufacturing', label: '制造业' },
+  { value: 'energy', label: '能源/矿产' },
+  { value: 'agriculture', label: '农业/林业' },
+  { value: 'transportation', label: '交通/物流' },
+  { value: 'real_estate', label: '房地产' },
+  { value: 'other', label: '其他' }
+]
 
 // 格式化日期
 const formatDate = (dateStr: string) => {
@@ -199,13 +289,17 @@ const pageSize = ref(10)
 // 搜索表单
 const searchForm = reactive({
   name: '',
-  legalPerson: ''
+  legalPerson: '',
+  status: '',
+  industry: ''
 })
 
 // 重置搜索条件
 const resetSearch = () => {
   searchForm.name = ''
   searchForm.legalPerson = ''
+  searchForm.status = ''
+  searchForm.industry = ''
   fetchData()
 }
 
@@ -220,16 +314,15 @@ const fetchData = async () => {
   loading.value = true
   try {
     const params = {
-      current: currentPage.value,
-      size: pageSize.value,
-      name: searchForm.name,
-      legalPerson: searchForm.legalPerson
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      keyword: searchForm.name,
+      status: searchForm.status,
+      industry: searchForm.industry
     }
-    const res = await getCompanyList(params)
+    const res = await getAdminCompanyList(params)
     companyList.value = res.data.records || []
     total.value = res.data.total || 0
-    currentPage.value = res.data.current || 1
-    pageSize.value = res.data.size || 10
   } catch (error) {
     console.error('获取企业列表失败', error)
     ElMessage.error('获取企业列表失败，请稍后再试')
@@ -264,9 +357,52 @@ const drawerVisible = ref(false)
 const currentCompany = ref<any>(null)
 
 // 查看企业详情
-const handleDetail = (row: any) => {
-  currentCompany.value = row
-  drawerVisible.value = true
+const handleDetail = async (row: any) => {
+  try {
+    const res = await getAdminCompanyDetail(row.id)
+    currentCompany.value = res.data
+    drawerVisible.value = true
+  } catch (error) {
+    console.error('获取企业详情失败', error)
+    ElMessage.error('获取企业详情失败，请稍后再试')
+  }
+}
+
+// 切换企业状态
+const handleToggleStatus = async (company: any) => {
+  const newStatus = company.status === CompanyStatus.ACTIVE ? CompanyStatus.INACTIVE : CompanyStatus.ACTIVE
+  const statusText = newStatus === CompanyStatus.ACTIVE ? '启用' : '禁用'
+  
+  try {
+    await ElMessageBox.confirm(
+      `确定要${statusText}企业 "${company.name}" 吗？`,
+      `${statusText}确认`,
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: newStatus === CompanyStatus.ACTIVE ? 'success' : 'warning'
+      }
+    )
+    
+    await updateCompanyStatus({
+      id: company.id,
+      status: newStatus
+    })
+    
+    ElMessage.success(`${statusText}企业成功`)
+    
+    // 更新当前数据
+    if (drawerVisible.value && currentCompany.value) {
+      currentCompany.value.status = newStatus
+    }
+    
+    // 刷新列表
+    fetchData()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(`${statusText}企业失败：${error.message || '未知错误'}`)
+    }
+  }
 }
 
 // 编辑表单相关
@@ -281,10 +417,16 @@ const form = reactive({
   licenseNumber: '',
   address: '',
   legalPerson: '',
+  industry: '',
+  size: '',
+  contactPerson: '',
+  contactPhone: '',
+  email: '',
+  website: '',
+  description: '',
   username: '',
   password: '',
   confirmPassword: '',
-  email: '',
   position: ''
 })
 
@@ -307,6 +449,19 @@ const validateLicenseNumber = (rule: any, value: string, callback: any) => {
   }
 }
 
+const validatePhone = (rule: any, value: string, callback: any) => {
+  if (!value) {
+    callback()
+    return
+  }
+  const pattern = /^1[3-9]\d{9}$/
+  if (!pattern.test(value)) {
+    callback(new Error('请输入正确的手机号码'))
+  } else {
+    callback()
+  }
+}
+
 const rules = {
   name: [
     { required: true, message: '请输入企业名称', trigger: 'blur' },
@@ -323,6 +478,30 @@ const rules = {
     { required: true, message: '请输入法定代表人姓名', trigger: 'blur' },
     { max: 50, message: '长度不能超过50个字符', trigger: 'blur' }
   ],
+  industry: [
+    { required: true, message: '请选择所属行业', trigger: 'change' }
+  ],
+  size: [
+    { required: true, message: '请选择企业规模', trigger: 'change' }
+  ],
+  contactPerson: [
+    { required: true, message: '请输入联系人', trigger: 'blur' },
+    { max: 50, message: '长度不能超过50个字符', trigger: 'blur' }
+  ],
+  contactPhone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    { validator: validatePhone, trigger: 'blur' }
+  ],
+  email: [
+    { required: true, message: '请输入电子邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  website: [
+    { max: 100, message: '长度不能超过100个字符', trigger: 'blur' }
+  ],
+  description: [
+    { max: 500, message: '长度不能超过500个字符', trigger: 'blur' }
+  ],
   username: [
     { required: !isEdit.value, message: '请输入管理员用户名', trigger: 'blur' },
     { min: 4, max: 50, message: '长度在4到50个字符之间', trigger: 'blur' }
@@ -333,10 +512,6 @@ const rules = {
   ],
   confirmPassword: [
     { required: !isEdit.value, validator: validatePass2, trigger: 'blur' }
-  ],
-  email: [
-    { required: !isEdit.value, message: '请输入电子邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
   ],
   position: [
     { max: 50, message: '长度不能超过50个字符', trigger: 'blur' }
@@ -351,6 +526,13 @@ const handleEdit = (row: any) => {
   form.licenseNumber = row.licenseNumber
   form.address = row.address || ''
   form.legalPerson = row.legalPerson
+  form.industry = row.industry || ''
+  form.size = row.size || ''
+  form.contactPerson = row.contactPerson || ''
+  form.contactPhone = row.contactPhone || ''
+  form.email = row.email || ''
+  form.website = row.website || ''
+  form.description = row.description || ''
   dialogVisible.value = true
   drawerVisible.value = false
 }
@@ -363,10 +545,16 @@ const handleAdd = () => {
   form.licenseNumber = ''
   form.address = ''
   form.legalPerson = ''
+  form.industry = ''
+  form.size = ''
+  form.contactPerson = ''
+  form.contactPhone = ''
+  form.email = ''
+  form.website = ''
+  form.description = ''
   form.username = ''
   form.password = ''
   form.confirmPassword = ''
-  form.email = ''
   form.position = ''
   dialogVisible.value = true
 }
@@ -486,6 +674,11 @@ onMounted(() => {
 
 .company-details {
   padding: 0 20px;
+}
+
+.company-description {
+  white-space: pre-wrap;
+  line-height: 1.5;
 }
 
 :deep(.el-descriptions__label) {
